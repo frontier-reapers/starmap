@@ -1,0 +1,48 @@
+# Cloudflare Pages Headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# Cache binary data files aggressively (immutable, 1 year)
+/data/*.bin
+  Cache-Control: public, max-age=31536000, immutable
+  
+# Cache JSON data files (1 day, revalidate)
+/data/*.json
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# HTML files (no cache, always revalidate)
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+
+# JavaScript modules (1 day, revalidate)
+/*.js
+  Cache-Control: public, max-age=86400, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# CSS files (1 day, revalidate)
+/*.css
+  Cache-Control: public, max-age=86400, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# Fonts (1 year, immutable)
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Images (1 week)
+/*.png
+  Cache-Control: public, max-age=604800
+/*.jpg
+  Cache-Control: public, max-age=604800
+/*.svg
+  Cache-Control: public, max-age=604800
+  X-Content-Type-Options: nosniff
+
+# Security headers for all pages
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

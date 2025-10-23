@@ -2,6 +2,13 @@
 
 A 3D interactive star map visualization using three.js, rendering EVE Online solar system data with orbital controls and hover labels.
 
+## Documentation Index
+
+- **[Main Documentation](./README.md)** (this file) - Complete project documentation
+- **[Cloudflare Pages Deployment](./CLOUDFLARE_PAGES.md)** - Deploy to Cloudflare's global CDN
+- **[Route Feature Guide](./ROUTE_FEATURE.md)** - Interactive route visualization system
+- **[Migration Summary](./MIGRATION_SUMMARY.md)** - Project structure and setup
+
 ## Project Structure
 
 ```
@@ -122,9 +129,23 @@ Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) and type "Run Task" to access:
 - **Docker: Run Web Server** - Start web container on port 8080
 - **Watch Tests** - Run tests in watch mode
 
-## Docker Deployment
+## Deployment
 
-### Web Application
+### Cloudflare Pages (Recommended)
+
+Deploy to Cloudflare's global CDN for free hosting with automatic HTTPS, DDoS protection, and edge caching.
+
+**See [Cloudflare Pages Deployment Guide](./CLOUDFLARE_PAGES.md) for complete instructions.**
+
+Quick setup:
+1. Connect Cloudflare Pages with build command `./build.sh` and output `public`
+2. Set environment variable: `PYTHON_VERSION=3.11`
+
+The build script automatically downloads the latest `static.db` from [evefrontier_datasets](https://github.com/Scetrov/evefrontier_datasets/releases) during deployment.
+
+### Docker Deployment
+
+#### Web Application
 
 Build and run the web server container:
 
@@ -140,7 +161,7 @@ npm run docker:run:web
 
 Access at http://localhost:8080/public/
 
-### Data Builder
+#### Data Builder
 
 Build and run the data processing container:
 
@@ -154,6 +175,14 @@ docker run \
   -v $(pwd)/public/data:/app/output \
   starmap-data
 ```
+
+### Other Platforms
+
+The application is a static site with a Python build step. Deploy to any platform that supports:
+- Python 3.11+ for build step
+- Static file hosting
+
+Supported: Vercel, Netlify, GitHub Pages (with Actions), AWS S3, Azure Static Web Apps, etc.
 
 ## Data Format
 
