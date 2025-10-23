@@ -119,6 +119,16 @@ def main():
         zv = float(row[z_col]) if z_col else 0.0
         systems.append((int(sid), nm, xv, yv, zv))
 
+    # Load systems with NPC stations
+    station_systems = set()
+    try:
+        cur.execute("SELECT DISTINCT solarSystemId FROM NpcStations WHERE solarSystemId IS NOT NULL")
+        for row in cur.fetchall():
+            station_systems.add(int(row[0]))
+        print(f"Found {len(station_systems)} systems with NPC stations", file=__import__('sys').stderr)
+    except Exception as e:
+        print(f"Warning: Could not load NPC stations: {e}", file=__import__('sys').stderr)
+
     # Load jumps
     jumps = []
     if jumps_table:
@@ -146,12 +156,17 @@ def main():
     ids = array.array('I')
     positions = array.array('f')
     names = {}
+    station_ids = array.array('I')  # IDs of systems with stations
 
     for sid, nm, x, y, z in systems:
         ids.append(sid)
         names[str(sid)] = nm
         xt, yt, zt = transform_xyz(x, y, z)
         positions.extend([xt, yt, zt])
+        
+        # Track systems with stations
+        if sid in station_systems:
+            station_ids.append(sid)
 
     # Filter jumps to only include connections between valid systems
     flat_jumps = array.array('I')
@@ -167,17 +182,20 @@ def main():
     (out_dir / "systems_ids.bin").write_bytes(ids.tobytes())
     (out_dir / "systems_names.json").write_text(json.dumps(names, ensure_ascii=False))
     (out_dir / "jumps.bin").write_bytes(flat_jumps.tobytes())
+    (out_dir / "systems_with_stations.bin").write_bytes(station_ids.tobytes())
 
     manifest = {
         "counts": {
             "systems": len(systems),
-            "jumps": len(jumps)
+            "jumps": len(jumps),
+            "systems_with_stations": len(station_ids)
         },
         "schema": {
             "systems_positions.bin": {"type":"Float32Array","components":3},
             "systems_ids.bin": {"type":"Uint32Array"},
             "systems_names.json": {"type":"MapIdToName"},
-            "jumps.bin": {"type":"Uint32Array","components":2,"meaning":"pairs of system IDs [a,b]"}
+            "jumps.bin": {"type":"Uint32Array","components":2,"meaning":"pairs of system IDs [a,b]"},
+            "systems_with_stations.bin": {"type":"Uint32Array","meaning":"IDs of systems with NPC stations"}
         },
         "coord_system": {
             "units": "lightyears",
@@ -191,6 +209,7 @@ def main():
         "jumps_table": jumps_table,
         "systems_count": len(systems),
         "filtered_systems": filtered_count,
+        "systems_with_stations": len(station_ids),
         "jumps_count": len(flat_jumps) // 2,
         "filtered_jumps": filtered_jumps,
         "out": str(out_dir.resolve())

@@ -1,7 +1,8 @@
 {
   "counts": {
     "systems": 24026,
-    "jumps": 7408
+    "jumps": 7408,
+    "systems_with_stations": 57
   },
   "schema": {
     "systems_positions.bin": {
@@ -18,6 +19,10 @@
       "type": "Uint32Array",
       "components": 2,
       "meaning": "pairs of system IDs [a,b]"
+    },
+    "systems_with_stations.bin": {
+      "type": "Uint32Array",
+      "meaning": "IDs of systems with NPC stations"
     }
   },
   "coord_system": {

@@ -90,12 +90,13 @@ async function loadData() {
   // developing locally without the binary blobs), fall back to generated demo
   // data so the scene still renders.
   debugLog('loadData: fetching manifest and binary blobs...');
-  const [manifest, posBuf, idsBuf, namesRes, jumpsBuf] = await Promise.all([
+  const [manifest, posBuf, idsBuf, namesRes, jumpsBuf, stationsBuf] = await Promise.all([
     fetch(DATA_BASE + 'manifest.json').then(r => r.json()),
     fetchArrayBuffer(DATA_BASE + 'systems_positions.bin'),
     fetchArrayBuffer(DATA_BASE + 'systems_ids.bin'),
     fetch(DATA_BASE + 'systems_names.json').then(r => r.json()),
-    fetchArrayBuffer(DATA_BASE + 'jumps.bin')
+    fetchArrayBuffer(DATA_BASE + 'jumps.bin'),
+    fetchArrayBuffer(DATA_BASE + 'systems_with_stations.bin')
   ]);
 
   // The binary data is in native (little-endian) format from Python array.tobytes()
@@ -104,7 +105,12 @@ async function loadData() {
   const positions = new Float32Array(posBuf);
   const ids = new Uint32Array(idsBuf);
   const jumps = new Uint32Array(jumpsBuf);
+  const stationSystemIds = new Uint32Array(stationsBuf);
   const idToName = namesRes;
+  
+  // Build set of station system IDs for quick lookup
+  const stationSystemSet = new Set(stationSystemIds);
+  debugLog('loadData: loaded station systems', { stationCount: stationSystemIds.length });
 
   // Apply coordinate transform from manifest: (x,y,z) -> (x,z,-y)
   // This is Rx(-90deg) rotation to convert from data space to three.js space
@@ -132,7 +138,7 @@ async function loadData() {
   for (let i=0;i<ids.length;i++) indexOf.set(ids[i], i);
 
   debugLog('loadData: complete');
-  return {manifest, positions, ids, idToName, jumps, indexOf};
+  return {manifest, positions, ids, idToName, jumps, indexOf, stationSystemSet};
 }
 
 function computeBounds(positions) {
@@ -152,21 +158,40 @@ function computeBounds(positions) {
   return {bounds:b, center, radius};
 }
 
-function makeStarfield(positions) {
+function makeStarfield(positions, ids, stationSystemSet) {
   debugLog('makeStarfield: creating Points for', positions.length / 3, 'stars');
   // THREE.Points with additive blending so stars pop at 1080p
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  // Per-vertex color - rgb(255, 71, 0) normalized to 0-1 range
+  
+  // Per-vertex color and size - distinguish station systems
   const colors = new Float32Array(positions.length);
-  for (let i=0; i<colors.length; i+=3) {
-    colors[i] = 1.0;      // R: 255/255
-    colors[i+1] = 0.278;  // G: 71/255
-    colors[i+2] = 0.0;    // B: 0/255
+  const sizes = new Float32Array(positions.length / 3);
+  
+  for (let i = 0; i < ids.length; i++) {
+    const systemId = ids[i];
+    const hasStation = stationSystemSet.has(systemId);
+    const colorIdx = i * 3;
+    
+    if (hasStation) {
+      // Bright red for station systems
+      colors[colorIdx] = 1.0;      // R: 255/255
+      colors[colorIdx + 1] = 0.0;  // G: 0/255
+      colors[colorIdx + 2] = 0.0;  // B: 0/255
+      sizes[i] = 7.5; // 3x larger (2.5 * 3)
+    } else {
+      // Orange for regular systems
+      colors[colorIdx] = 1.0;      // R: 255/255
+      colors[colorIdx + 1] = 0.278; // G: 71/255
+      colors[colorIdx + 2] = 0.0;   // B: 0/255
+      sizes[i] = 2.5;
+    }
   }
+  
   geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+  
   const mat = new THREE.PointsMaterial({
-    size: 2.5, // tweak for 1080p
     sizeAttenuation: true,
     vertexColors: true,
     transparent: true,
@@ -174,6 +199,19 @@ function makeStarfield(positions) {
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
+  
+  // Enable per-vertex size
+  mat.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      'void main() {',
+      'attribute float size;\nvoid main() {'
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      'gl_PointSize = size;',
+      'gl_PointSize = size;'
+    );
+  };
+  
   const pts = new THREE.Points(geom, mat);
   pts.frustumCulled = false;
   debugLog('makeStarfield: created Points object');
@@ -250,7 +288,7 @@ function makeJumpLines(jumps, indexOf, positions) {
 
   const data = await loadData();
   debugLog('main: data loaded');
-  const starPoints = makeStarfield(data.positions);
+  const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
 
@@ -312,7 +350,8 @@ function makeJumpLines(jumps, indexOf, positions) {
         const i = intersects[0].index;
         const sysId = data.ids[i];
         const name = data.idToName[String(sysId)] || String(sysId);
-        labelDiv.textContent = name;
+        const hasStation = data.stationSystemSet.has(sysId);
+        labelDiv.textContent = hasStation ? `🛰️ ${name}` : name;
         labelObj.position.set(
           data.positions[i*3+0],
           data.positions[i*3+1],
