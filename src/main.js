@@ -204,13 +204,17 @@ function makeJumpLines(jumps, indexOf, positions) {
   const used = w/3;
   const finalPos = linePos.subarray(0, used*3);
   const finalCol = lineCol.subarray(0, used*3);
-  // White endpoints => gradient looks white; customize per-system color if desired
-  for (let i=0;i<finalCol.length;i++) finalCol[i] = 0.7;
+  // Use same red/orange color as stars: rgb(255, 71, 0) normalized to 0-1
+  for (let i=0; i<finalCol.length; i+=3) {
+    finalCol[i] = 1.0;      // R: 255/255
+    finalCol[i+1] = 0.278;  // G: 71/255
+    finalCol[i+2] = 0.0;    // B: 0/255
+  }
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(finalPos, 3));
   geom.setAttribute('color', new THREE.BufferAttribute(finalCol, 3));
-  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 });
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5 });
   const lines = new THREE.LineSegments(geom, mat);
   lines.frustumCulled = false;
   return lines;
