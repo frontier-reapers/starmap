@@ -671,6 +671,24 @@ function ensureRouteTableInViewport(element) {
     focusOnSystem(focusParam, false); // Don't animate on initial load
   }
   
+  // Handle browser back/forward navigation
+  window.addEventListener('popstate', (event) => {
+    debugLog('popstate: browser navigation detected');
+    const currentParams = new URLSearchParams(window.location.search);
+    const newFocusParam = currentParams.get('focus');
+    
+    if (newFocusParam) {
+      debugLog('popstate: focusing on', newFocusParam);
+      focusOnSystem(newFocusParam, true); // Animate on navigation
+    } else {
+      debugLog('popstate: no focus parameter, resetting to initial view');
+      // Reset to initial camera position
+      camera.position.set(center[0] + radius*0.6, center[1] + radius*0.3, center[2] + radius*0.6);
+      controls.target.set(center[0], center[1], center[2]);
+      controls.update();
+    }
+  });
+  
   // --- Route functionality ---
   let routeWaypoints = null;
   let routeLines = null;
@@ -761,7 +779,7 @@ function ensureRouteTableInViewport(element) {
         // Update URL with pushState
         const newUrl = new URL(window.location);
         newUrl.searchParams.set('focus', name);
-        window.history.pushState({}, '', newUrl);
+        window.history.pushState({ focus: name }, '', newUrl);
         
         // Focus on the clicked system
         focusOnSystem(name);

@@ -447,4 +447,90 @@ test.describe('Starmap Application', () => {
     const cursor = await firstRow.evaluate(el => window.getComputedStyle(el).cursor);
     expect(cursor).toBe('pointer');
   });
+
+  test('should handle browser back/forward navigation', async ({ page }) => {
+    await page.goto(`http://localhost:3000/public/?debug=true`);
+    
+    await page.waitForTimeout(3000);
+    
+    // Get initial camera position
+    const initialPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    // Navigate to a system via URL
+    await page.goto(`http://localhost:3000/public/?debug=true&focus=Strym`);
+    await page.waitForTimeout(1500);
+    
+    // Camera should have moved
+    const focusedPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    const cameraMoved = 
+      Math.abs(initialPosition.x - focusedPosition.x) > 0.1 ||
+      Math.abs(initialPosition.y - focusedPosition.y) > 0.1 ||
+      Math.abs(initialPosition.z - focusedPosition.z) > 0.1;
+    
+    expect(cameraMoved).toBe(true);
+    
+    // Go back
+    await page.goBack();
+    await page.waitForTimeout(1500);
+    
+    // Camera should move back to initial position (approximately)
+    const backPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    // Should be closer to initial position than focused position
+    const distToInitial = Math.sqrt(
+      Math.pow(backPosition.x - initialPosition.x, 2) +
+      Math.pow(backPosition.y - initialPosition.y, 2) +
+      Math.pow(backPosition.z - initialPosition.z, 2)
+    );
+    
+    const distToFocused = Math.sqrt(
+      Math.pow(backPosition.x - focusedPosition.x, 2) +
+      Math.pow(backPosition.y - focusedPosition.y, 2) +
+      Math.pow(backPosition.z - focusedPosition.z, 2)
+    );
+    
+    expect(distToInitial).toBeLessThan(distToFocused);
+    
+    // Go forward
+    await page.goForward();
+    await page.waitForTimeout(1500);
+    
+    // Camera should move back to focused position (approximately)
+    const forwardPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    // Should be close to focused position
+    const distToFocusedAfterForward = Math.sqrt(
+      Math.pow(forwardPosition.x - focusedPosition.x, 2) +
+      Math.pow(forwardPosition.y - focusedPosition.y, 2) +
+      Math.pow(forwardPosition.z - focusedPosition.z, 2)
+    );
+    
+    // Allow for some tolerance due to animation timing
+    expect(distToFocusedAfterForward).toBeLessThan(10);
+  });
 });

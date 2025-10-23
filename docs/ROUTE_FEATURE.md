@@ -63,8 +63,17 @@ console.log(`Route URL: ?route=${token}`);
   - **Drag to reposition** by clicking/dragging the header or background
   - **Position persists** in localStorage across sessions
   - **Hover effect** highlights clickable waypoints
+  - **Browser navigation support** - back/forward buttons work correctly with focus parameter
 - **OrbitControls disabled during drag** to prevent unwanted camera rotation
 - Table stays within viewport bounds automatically
+
+### Browser Navigation
+
+- **Back/forward buttons** work seamlessly with the `?focus=` URL parameter
+- **popstate event listener** updates camera position when navigating browser history
+- **Animated transitions** when using back/forward (1 second ease-in-out)
+- **Resets to initial view** when navigating back to URL without focus parameter
+- **pushState updates** preserve browsing history when clicking systems or waypoints
 
 ### Draggable Interface
 
