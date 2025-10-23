@@ -24,12 +24,12 @@ When setting up your Cloudflare Pages project, use these build settings:
 
 Set the following environment variable in your Cloudflare Pages project settings:
 
-- **Python version**: `PYTHON_VERSION` = `3.11` (or higher)
+- **Python version**: `PYTHON_VERSION` = `3.12` (or higher)
 
 To set this:
 1. Go to your Cloudflare Pages project
 2. Navigate to **Settings** → **Environment variables**
-3. Add `PYTHON_VERSION` with value `3.11`
+3. Add `PYTHON_VERSION` with value `3.12`
 4. Save changes
 
 ### Advanced Build Settings (Optional)
@@ -57,7 +57,7 @@ You can also configure these in your project settings:
 
 3. **Add Environment Variables**:
    - Click **Environment variables**
-   - Add `PYTHON_VERSION` = `3.11`
+   - Add `PYTHON_VERSION` = `3.12`
 
 4. **Deploy**:
    - Click **Save and Deploy**
@@ -119,7 +119,7 @@ git push
 
 ### Build Fails: Python errors
 
-**Solution**: Ensure `PYTHON_VERSION` environment variable is set to `3.11` or higher in your Cloudflare Pages project settings.
+**Solution**: Ensure `PYTHON_VERSION` environment variable is set to `3.12` or higher in your Cloudflare Pages project settings.
 
 ### Build Timeout
 

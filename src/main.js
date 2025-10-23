@@ -9,7 +9,7 @@ const DEBUG_ENABLED = (() => {
   try {
     const params = new URLSearchParams(window.location.search);
     return params.get('debug') === 'true';
-  } catch (e) {
+  } catch {
     return false;
   }
 })();
@@ -35,7 +35,7 @@ function _makeDebugPanel(){
       document.body.appendChild(panel);
     }
     return panel;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -49,20 +49,20 @@ function debugLog(...args){
     if (panel) {
       const ts = new Date().toISOString();
       panel.textContent += ts + ' ' + args.map(a => {
-        try { return typeof a === 'string' ? a : JSON.stringify(a); } catch(e){ return String(a); }
+        try { return typeof a === 'string' ? a : JSON.stringify(a); } catch{ return String(a); }
       }).join(' ') + '\n';
       panel.scrollTop = panel.scrollHeight;
     }
-  } catch (e) {
+  } catch {
     // best-effort
   }
 }
 
 window.addEventListener('error', (ev) => {
-  try { debugLog('window.error:', ev.message || ev); } catch(e){ /* ignore logging errors */ }
+  try { debugLog('window.error:', ev.message || ev); } catch{ /* ignore logging errors */ }
 });
 window.addEventListener('unhandledrejection', (ev) => {
-  try { debugLog('unhandledrejection:', ev.reason || ev); } catch(e){ /* ignore logging errors */ }
+  try { debugLog('unhandledrejection:', ev.reason || ev); } catch{ /* ignore logging errors */ }
 });
 
 debugLog('module loaded', { href: typeof location !== 'undefined' ? location.href : null, ua: navigator.userAgent });
@@ -351,7 +351,7 @@ function createRouteTable(waypoints, focusCallback) {
       const { top, right } = JSON.parse(savedPos);
       table.style.top = top + 'px';
       table.style.right = right + 'px';
-    } catch (e) {
+    } catch {
       /* ignore invalid storage */ 
     }
   }

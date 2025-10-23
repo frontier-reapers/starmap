@@ -19,11 +19,11 @@
     "lint": "eslint src/"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "@vitest/ui": "^1.0.0",
-    "eslint": "^8.55.0",
+    "@playwright/test": "^1.49.1",
+    "@vitest/ui": "^2.1.8",
+    "eslint": "^9.17.0",
     "http-server": "^14.1.1",
-    "vitest": "^1.0.0"
+    "vitest": "^2.1.8"
   },
   "keywords": [
     "threejs",
