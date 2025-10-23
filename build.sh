@@ -38,5 +38,8 @@ fi
 echo "Building data files..."
 python data/build_data.py --db data/static.db --out public/data
 
+echo "Copying source files to public directory..."
+cp -r src public/
+
 echo "Build complete!"
 echo "Output directory: public/"

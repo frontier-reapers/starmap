@@ -1,10 +1,10 @@
 # Cloudflare Pages Redirects
 # https://developers.cloudflare.com/pages/configuration/redirects/
 
-# Redirect root to public/index.html (with system focus if provided)
-/ /public/index.html 200
-/?system=* /public/index.html?system=:system 200
-/?route=* /public/index.html?route=:route 200
+# Redirect root to index.html (with system focus if provided)
+/ /index.html 200
+/?system=* /index.html?system=:system 200
+/?route=* /index.html?route=:route 200
 
 # Fallback for any unmatched routes - serve index.html as SPA
-/* /public/index.html 200
+/* /index.html 200
