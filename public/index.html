@@ -5,9 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Starmap (three.js)</title>
   <style>
+    @font-face {
+      font-family: 'Disket Mono';
+      src: url('./fonts/Disket-Mono-Bold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    
     html, body, #app { margin:0; padding:0; height:100%; background:#000; color:#ddd; font-family: system-ui, sans-serif; }
     #overlay { position: absolute; top:10px; left:10px; background: rgba(0,0,0,0.5); padding:8px 10px; border-radius:8px; font-size:12px; }
-    .label { color:#fff; font-size:12px; text-shadow: 0 0 4px rgba(255,255,255,0.9); pointer-events:none; }
+    
+    .label {
+      font-family: 'Disket Mono', monospace;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 6px 12px;
+      border: 2px solid rgba(255, 71, 0, 0.8);
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: 0 0 8px rgba(255, 71, 0, 0.6), 0 0 16px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    
     canvas { display:block; }
   </style>
   <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
