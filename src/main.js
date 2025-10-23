@@ -566,6 +566,85 @@ function ensureRouteTableInViewport(element) {
   const jumpLines = makeJumpLines(data.jumps, data.indexOf, data.positions);
   scene.add(jumpLines);
   debugLog('main: jumpLines added to scene');
+  
+  // --- Persistent labels management (must be before focusOnSystem) ---
+  const persistentLabels = {
+    focus: null,
+    routeStart: null,
+    routeEnd: null
+  };
+  
+  function createPersistentLabel(text, type = 'focus') {
+    const div = document.createElement('div');
+    div.className = 'label';
+    div.style.marginTop = '-1em';
+    
+    // Style based on type
+    if (type === 'focus') {
+      // Keep default orange styling
+    } else if (type === 'routeStart' || type === 'routeEnd') {
+      // Blue styling for route markers
+      div.style.background = 'linear-gradient(135deg, rgba(0, 120, 255, 0.15) 0%, rgba(30, 144, 255, 0.1) 50%, rgba(0, 120, 255, 0.08) 100%)';
+      div.style.border = '1px solid rgba(0, 191, 255, 0.4)';
+      div.style.boxShadow = '0 0 10px rgba(0, 191, 255, 0.3), inset 0 0 5px rgba(0, 191, 255, 0.1)';
+    }
+    
+    div.textContent = text;
+    const obj = new CSS2DObject(div);
+    scene.add(obj);
+    return obj;
+  }
+  
+  function updatePersistentLabel(labelType, systemIdOrName) {
+    // Remove existing label
+    if (persistentLabels[labelType]) {
+      scene.remove(persistentLabels[labelType]);
+      persistentLabels[labelType] = null;
+    }
+    
+    if (!systemIdOrName) return;
+    
+    // Find system index
+    let systemIndex = -1;
+    const asNumber = parseInt(systemIdOrName, 10);
+    if (!isNaN(asNumber)) {
+      systemIndex = data.indexOf.get(asNumber);
+    }
+    
+    if (systemIndex === undefined || systemIndex === -1) {
+      const searchName = String(systemIdOrName).toLowerCase();
+      for (const [id, name] of Object.entries(data.idToName)) {
+        if (name.toLowerCase() === searchName) {
+          systemIndex = data.indexOf.get(parseInt(id, 10));
+          break;
+        }
+      }
+    }
+    
+    if (systemIndex !== undefined && systemIndex !== -1) {
+      const sysId = data.ids[systemIndex];
+      const name = data.idToName[String(sysId)] || String(sysId);
+      const hasStation = data.stationSystemSet.has(sysId);
+      
+      let labelText;
+      if (labelType === 'focus') {
+        labelText = hasStation ? `🛰️ ${name}` : name;
+      } else if (labelType === 'routeStart') {
+        labelText = `🚀 START: ${name}`;
+      } else if (labelType === 'routeEnd') {
+        labelText = `🏁 END: ${name}`;
+      }
+      
+      const label = createPersistentLabel(labelText, labelType);
+      label.position.set(
+        data.positions[systemIndex * 3 + 0],
+        data.positions[systemIndex * 3 + 1],
+        data.positions[systemIndex * 3 + 2]
+      );
+      persistentLabels[labelType] = label;
+      debugLog(`updatePersistentLabel: ${labelType} label created for`, name);
+    }
+  }
 
   // --- Focus functionality ---
   
@@ -655,6 +734,9 @@ function ensureRouteTableInViewport(element) {
         controls.update();
       }
       
+      // Update persistent focus label
+      updatePersistentLabel('focus', systemIdOrName);
+      
       debugLog('focusOnSystem: focused on', systemIdOrName, 'at index', systemIndex, 'position', [x, y, z]);
       return true;
     } else {
@@ -679,13 +761,15 @@ function ensureRouteTableInViewport(element) {
     
     if (newFocusParam) {
       debugLog('popstate: focusing on', newFocusParam);
-      focusOnSystem(newFocusParam, true); // Animate on navigation
+      focusOnSystem(newFocusParam, true); // Animate on navigation (will update label)
     } else {
       debugLog('popstate: no focus parameter, resetting to initial view');
       // Reset to initial camera position
       camera.position.set(center[0] + radius*0.6, center[1] + radius*0.3, center[2] + radius*0.6);
       controls.target.set(center[0], center[1], center[2]);
       controls.update();
+      // Remove focus label when navigating away
+      updatePersistentLabel('focus', null);
     }
   });
   
@@ -712,6 +796,20 @@ function ensureRouteTableInViewport(element) {
       if (routeLines) {
         scene.add(routeLines);
         debugLog('main: route lines added to scene');
+      }
+      
+      // Add persistent labels for route start and end
+      if (routeWaypoints.length > 0) {
+        const startWaypoint = routeWaypoints[0];
+        const endWaypoint = routeWaypoints[routeWaypoints.length - 1];
+        
+        if (startWaypoint.valid) {
+          updatePersistentLabel('routeStart', startWaypoint.Id);
+        }
+        
+        if (endWaypoint.valid && routeWaypoints.length > 1) {
+          updatePersistentLabel('routeEnd', endWaypoint.Id);
+        }
       }
     } catch (err) {
       debugLog('main: failed to decode route', err.message);
@@ -744,6 +842,7 @@ function ensureRouteTableInViewport(element) {
   // Adjust threshold so picking is easier at 1080p
   raycaster.params.Points.threshold = radius * 0.001; // scale with scene size
 
+  // Hover label (temporary)
   const labelDiv = document.createElement('div');
   labelDiv.className = 'label';
   labelDiv.style.marginTop = '-1em';

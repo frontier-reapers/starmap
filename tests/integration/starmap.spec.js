@@ -533,4 +533,40 @@ test.describe('Starmap Application', () => {
     // Allow for some tolerance due to animation timing
     expect(distToFocusedAfterForward).toBeLessThan(10);
   });
+
+  test('should show persistent label for focused system', async ({ page }) => {
+    await page.goto(`http://localhost:3000/public/?debug=true&focus=Strym`);
+    
+    await page.waitForTimeout(3000);
+    
+    // Label should be visible in the DOM (CSS2D labels are actual DOM elements)
+    const labels = page.locator('.label');
+    const labelCount = await labels.count();
+    expect(labelCount).toBeGreaterThan(0);
+    
+    // At least one label should contain "Strym"
+    const labelTexts = await labels.allTextContents();
+    const hasStrymLabel = labelTexts.some(text => text.includes('Strym'));
+    expect(hasStrymLabel).toBe(true);
+  });
+
+  test('should show blue labels for route start and end', async ({ page }) => {
+    const strymRouteToken = 'H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${strymRouteToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    // Should have multiple labels (start + end + possibly hover)
+    const labels = page.locator('.label');
+    const labelCount = await labels.count();
+    expect(labelCount).toBeGreaterThanOrEqual(2);
+    
+    // Check for START and END markers in label text
+    const labelTexts = await labels.allTextContents();
+    const hasStartLabel = labelTexts.some(text => text.includes('START'));
+    const hasEndLabel = labelTexts.some(text => text.includes('END'));
+    
+    expect(hasStartLabel).toBe(true);
+    expect(hasEndLabel).toBe(true);
+  });
 });
