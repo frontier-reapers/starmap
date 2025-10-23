@@ -76,23 +76,23 @@ console.log('');
 
 // Test route 2: User-provided 17 waypoint route from Strym
 const waypoints2 = [
-  {Id: 30009542, Type: 0},  // Strym - Waypoint
-  {Id: 30009551, Type: 2},  // Z:2V39 - Citadel
-  {Id: 30009547, Type: 2},  // Q:374K - Citadel
-  {Id: 30009538, Type: 2},  // Mandr - Citadel
-  {Id: 30009554, Type: 2},  // G:2TV3 - Citadel
-  {Id: 30009555, Type: 2},  // G:34SV - Citadel
-  {Id: 30009557, Type: 2},  // Q:13N6 - Citadel
-  {Id: 30009570, Type: 2},  // U:39A3 - Citadel
-  {Id: 30009569, Type: 2},  // Z:3N5K - Citadel
-  {Id: 30009571, Type: 2},  // B:37EI - Citadel
-  {Id: 30009302, Type: 1},  // OKK-0PH - Station
-  {Id: 30009299, Type: 1},  // I4F-MCH - Station
-  {Id: 30009301, Type: 1},  // OCC-L8H - Station
-  {Id: 30009297, Type: 1},  // EBG-P8H - Station
-  {Id: 30009260, Type: 2},  // E4N-48H - Citadel
-  {Id: 30009263, Type: 2},  // IVK-HJH - Citadel
-  {Id: 30011605, Type: 1},  // IGJ-PSH - Station
+  {Id: 30009542, Type: 0},  // Strym - Start
+  {Id: 30009551, Type: 2},  // Z:2V39 - NPC Gate
+  {Id: 30009547, Type: 2},  // Q:374K - NPC Gate
+  {Id: 30009538, Type: 2},  // Mandr - NPC Gate
+  {Id: 30009554, Type: 2},  // G:2TV3 - NPC Gate
+  {Id: 30009555, Type: 2},  // G:34SV - NPC Gate
+  {Id: 30009557, Type: 2},  // Q:13N6 - NPC Gate
+  {Id: 30009570, Type: 2},  // U:39A3 - NPC Gate
+  {Id: 30009569, Type: 2},  // Z:3N5K - NPC Gate
+  {Id: 30009571, Type: 2},  // B:37EI - NPC Gate
+  {Id: 30009302, Type: 1},  // OKK-0PH - Jump
+  {Id: 30009299, Type: 1},  // I4F-MCH - Jump
+  {Id: 30009301, Type: 1},  // OCC-L8H - Jump
+  {Id: 30009297, Type: 1},  // EBG-P8H - Jump
+  {Id: 30009260, Type: 2},  // E4N-48H - NPC Gate
+  {Id: 30009263, Type: 2},  // IVK-HJH - NPC Gate
+  {Id: 30011605, Type: 1},  // IGJ-PSH - Jump
 ];
 
 const raw2 = encodeRawBitPacked(waypoints2);

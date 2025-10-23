@@ -22,9 +22,9 @@ Use the included `bitpacking.js` (Node.js) to encode routes:
 const { encodeToBase64UrlGzip } = require('./src/bitpacking.js');
 
 const waypoints = [
-  { Id: 30000142, Type: 1 },  // Jita (Station)
-  { Id: 30002187, Type: 0 },  // Waypoint
-  { Id: 30000144, Type: 1 },  // Another station
+  { Id: 30000142, Type: 1 },  // Jita (Jump)
+  { Id: 30002187, Type: 0 },  // Start
+  { Id: 30000144, Type: 1 },  // Another jump
 ];
 
 const token = encodeToBase64UrlGzip(waypoints);
@@ -33,10 +33,11 @@ console.log(`Route URL: ?route=${token}`);
 
 ### Waypoint Types
 
-- **0** = Waypoint
-- **1** = Station  
-- **2** = Citadel
-- **3** = Bookmark
+- **0** = Start
+- **1** = Jump
+- **2** = NPC Gate
+- **3** = Smart Gate
+- **4** = Set Destination
 
 ## Features
 

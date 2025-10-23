@@ -287,7 +287,7 @@ test.describe('Starmap Application', () => {
 
   test('should render 17-waypoint Strym route', async ({ page }) => {
     // Real-world route: Strym -> Z:2V39 -> ... -> IGJ-PSH (17 waypoints)
-    // Mix of waypoint types: 0=Waypoint, 1=Station, 2=Citadel
+    // Mix of waypoint types: 0=Start, 1=Jump, 2=NpcGate
     const strymRouteToken = 'H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA';
     await page.goto(`http://localhost:3000/public/?debug=true&route=${strymRouteToken}`);
     
@@ -306,25 +306,25 @@ test.describe('Starmap Application', () => {
     const rowCount = await tableRows.count();
     expect(rowCount).toBe(17);
     
-    // Verify first waypoint is Strym (Type: Waypoint)
+    // Verify first waypoint is Strym (Type: Start)
     const firstRow = tableRows.nth(0);
     await expect(firstRow.locator('.step-number')).toContainText('1');
-    await expect(firstRow.locator('.waypoint-type')).toContainText('Waypoint');
+    await expect(firstRow.locator('.waypoint-type')).toContainText('Start');
     
-    // Verify a citadel waypoint (Z:2V39 is second, Type: Citadel)
+    // Verify a NPC Gate waypoint (Z:2V39 is second, Type: NPC Gate)
     const secondRow = tableRows.nth(1);
     await expect(secondRow.locator('.step-number')).toContainText('2');
-    await expect(secondRow.locator('.waypoint-type')).toContainText('Citadel');
+    await expect(secondRow.locator('.waypoint-type')).toContainText('NPC Gate');
     
-    // Verify a station waypoint (OKK-0PH is 11th, Type: Station)
+    // Verify a Jump waypoint (OKK-0PH is 11th, Type: Jump)
     const eleventhRow = tableRows.nth(10);
     await expect(eleventhRow.locator('.step-number')).toContainText('11');
-    await expect(eleventhRow.locator('.waypoint-type')).toContainText('Station');
+    await expect(eleventhRow.locator('.waypoint-type')).toContainText('Jump');
     
-    // Verify last waypoint (IGJ-PSH is 17th, Type: Station)
+    // Verify last waypoint (IGJ-PSH is 17th, Type: Jump)
     const lastRow = tableRows.nth(16);
     await expect(lastRow.locator('.step-number')).toContainText('17');
-    await expect(lastRow.locator('.waypoint-type')).toContainText('Station');
+    await expect(lastRow.locator('.waypoint-type')).toContainText('Jump');
     
     // Verify route lines are rendered on the map
     const debugPanel = page.locator('#debug-log');

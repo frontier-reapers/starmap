@@ -144,10 +144,11 @@ async function gunzip(gzData) {
 // ======== Waypoint type labels ========
 
 export const WAYPOINT_TYPES = {
-  0: 'Waypoint',
-  1: 'Station',
-  2: 'Citadel',
-  3: 'Bookmark'
+  0: 'Start',
+  1: 'Jump',
+  2: 'NPC Gate',
+  3: 'Smart Gate',
+  4: 'Set Destination'
 };
 
 export function getWaypointTypeLabel(type) {
