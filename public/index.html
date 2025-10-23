@@ -20,15 +20,36 @@
       font-size: 18px;
       font-weight: bold;
       color: #fff;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 6px 12px;
-      border: 2px solid rgba(255, 71, 0, 0.8);
-      border-radius: 4px;
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      box-shadow: 0 0 8px rgba(255, 71, 0, 0.6), 0 0 16px rgba(0, 0, 0, 0.8);
+      
+      /* Orange-tinted glassmorphism */
+      background: linear-gradient(
+        135deg,
+        rgba(255, 71, 0, 0.15) 0%,
+        rgba(255, 120, 30, 0.1) 50%,
+        rgba(255, 71, 0, 0.08) 100%
+      );
+      
+      /* Enhanced glass effect */
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
+      
+      /* Subtle orange-tinted border */
+      border: 1px solid rgba(255, 140, 60, 0.3);
+      border-radius: 8px;
+      
+      /* Multi-layer shadows for depth */
+      box-shadow: 
+        0 4px 16px rgba(255, 71, 0, 0.2),
+        0 2px 8px rgba(255, 120, 30, 0.15),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+      
+      padding: 8px 16px;
       pointer-events: none;
       white-space: nowrap;
+      
+      /* Smooth transitions */
+      transition: all 0.2s ease;
     }
     
     canvas { display:block; }
