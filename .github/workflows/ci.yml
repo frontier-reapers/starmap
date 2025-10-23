@@ -104,17 +104,17 @@ jobs:
           # Get the latest release info from the evefrontier_datasets repository
           RELEASE_INFO=$(curl -s https://api.github.com/repos/Scetrov/evefrontier_datasets/releases/latest)
           
-          # Extract the download URL for static.db asset
-          DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name == "static.db") | .browser_download_url')
+          # Extract the download URL for static_data.db asset (note: it's static_data.db not static.db)
+          DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name == "static_data.db") | .browser_download_url')
           
           if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
-            echo "Error: Could not find static.db in latest release"
+            echo "Error: Could not find static_data.db in latest release"
             echo "Available assets:"
             echo "$RELEASE_INFO" | jq -r '.assets[].name'
             exit 1
           fi
           
-          echo "Downloading static.db from: $DOWNLOAD_URL"
+          echo "Downloading static_data.db from: $DOWNLOAD_URL"
           curl -L -o data/static.db "$DOWNLOAD_URL"
           
           # Verify the file was downloaded

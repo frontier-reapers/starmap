@@ -45,10 +45,10 @@ function debugLog(...args){
 }
 
 window.addEventListener('error', (ev) => {
-  try { debugLog('window.error:', ev.message || ev); } catch(e){}
+  try { debugLog('window.error:', ev.message || ev); } catch(e){ /* ignore logging errors */ }
 });
 window.addEventListener('unhandledrejection', (ev) => {
-  try { debugLog('unhandledrejection:', ev.reason || ev); } catch(e){}
+  try { debugLog('unhandledrejection:', ev.reason || ev); } catch(e){ /* ignore logging errors */ }
 });
 
 debugLog('module loaded', { href: typeof location !== 'undefined' ? location.href : null, ua: navigator.userAgent });
