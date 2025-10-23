@@ -48,6 +48,20 @@ console.log(`Route URL: ?route=${token}`);
 - Lines render over jump gate network (orange lines)
 - Invalid system IDs are filtered out automatically
 
+### Persistent Labels
+
+- **Focus label** (orange glassmorphism) - Shows the currently focused system
+  - Created when clicking a system or using `?focus=` parameter
+  - Updates automatically when navigating with browser back/forward buttons
+  - Displays 🛰️ emoji for systems with NPC stations
+  - Removed when navigating away from focused system
+- **Route start label** (blue glassmorphism) - Shows 🚀 START marker
+  - Automatically created for first waypoint in route
+  - Blue gradient styling with cyan border
+- **Route end label** (blue glassmorphism) - Shows 🏁 END marker  
+  - Automatically created for last waypoint in route
+  - Distinct from start if route has multiple waypoints
+
 ### Route Table UI
 
 - **Cyan glassmorphism** design matching project aesthetic
