@@ -13,9 +13,22 @@ const BASE_ID = 30_000_000;
  * @returns {Promise<Array<{Id: number, Type: number}>>} Array of waypoints
  */
 export async function decodeRouteToken(token) {
-  const gz = fromBase64Url(token);
-  const raw = await gunzip(gz);
-  return decodeRawBitPacked(raw);
+  try {
+    const gz = fromBase64Url(token);
+    const raw = await gunzip(gz);
+    return decodeRawBitPacked(raw);
+  } catch (err) {
+    // Provide more specific error messages
+    if (err.message && err.message.includes('invalid code lengths')) {
+      throw new Error('Route token contains corrupted gzip data. The token may be incomplete or damaged.');
+    } else if (err.message && err.message.includes('incorrect header check')) {
+      throw new Error('Route token has invalid gzip header. Ensure the token is copied completely.');
+    } else if (err.message && err.message.includes('DecompressionStream')) {
+      throw new Error('Browser does not support route decompression. Please use a modern browser (Chrome 80+, Firefox 113+, Safari 16.4+).');
+    }
+    // Re-throw with original message if we don't recognize it
+    throw new Error(`Failed to decode route token: ${err.message}`);
+  }
 }
 
 // ======== Bit-tight decoding ========

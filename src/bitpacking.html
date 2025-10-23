@@ -1,0 +1,114 @@
+<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"></script>
+<script>
+  const BASE_ID = 30000000;
+
+  // ... BitWriter/BitReader from Node version, but use Uint8Array ...
+
+  class BitWriter {
+    constructor() { this._arr = []; this._cur = 0; this._bits = 0; }
+    writeBits(value, bitCount) {
+      for (let i = bitCount - 1; i >= 0; i--) {
+        const bit = (value >>> i) & 1;
+        this._cur = (this._cur << 1) | bit;
+        this._bits++;
+        if (this._bits === 8) { this._arr.push(this._cur); this._cur = 0; this._bits = 0; }
+      }
+    }
+    finish() {
+      if (this._bits > 0) { this._cur <<= (8 - this._bits); this._arr.push(this._cur & 0xff); }
+      return new Uint8Array(this._arr);
+    }
+  }
+
+  class BitReader {
+    constructor(buf) { this._buf = buf; this._i = 0; this._cur = 0; this._bits = 0; }
+    readBits(bitCount) {
+      let v = 0 >>> 0;
+      for (let i = 0; i < bitCount; i++) {
+        if (this._bits === 0) {
+          if (this._i >= this._buf.length) throw new Error("EOF");
+          this._cur = this._buf[this._i++];
+          this._bits = 8;
+        }
+        const msb = (this._cur & 0x80) ? 1 : 0;
+        v = (v << 1) | msb;
+        this._cur = (this._cur << 1) & 0xff;
+        this._bits--;
+      }
+      return v >>> 0;
+    }
+  }
+
+  function encodeRaw(items) {
+    let maxOffset = 0;
+    for (const it of items) {
+      const off = it.Id - BASE_ID;
+      if (off < 0) throw new Error("Id < BaseId");
+      if (off > maxOffset) maxOffset = off;
+    }
+    let k = Math.max(1, 32 - Math.clz32(maxOffset >>> 0));
+
+    const header = new Uint8Array(4);
+    header[0] = 1;
+    header[1] = k;
+    header[2] = (items.length >>> 8) & 0xff;
+    header[3] = items.length & 0xff;
+
+    const bw = new BitWriter();
+    for (const it of items) {
+      const off = it.Id - BASE_ID;
+      bw.writeBits(off >>> 0, k);
+      bw.writeBits(it.Type & 0b11, 2);
+    }
+    const payload = bw.finish();
+
+    const out = new Uint8Array(4 + payload.length);
+    out.set(header, 0);
+    out.set(payload, 4);
+    return out;
+  }
+
+  function decodeRaw(buf) {
+    if (buf.length < 4) throw new Error("Too short");
+    if (buf[0] !== 1) throw new Error("Bad version");
+    const k = buf[1];
+    const count = (buf[2] << 8) | buf[3];
+
+    const br = new BitReader(buf.subarray(4));
+    const items = [];
+    for (let i = 0; i < count; i++) {
+      const off = br.readBits(k) >>> 0;
+      const type = br.readBits(2) >>> 0;
+      items.push({ Id: BASE_ID + off, Type: type });
+    }
+    return items;
+  }
+
+  function toBase64Url(u8) {
+    let bin = "";
+    for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+    let b64 = btoa(bin).replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    return b64;
+  }
+  function fromBase64Url(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = s.length % 4;
+    if (pad === 2) s += "==";
+    else if (pad === 3) s += "=";
+    const bin = atob(s);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  function encodeToBase64UrlGzip(items) {
+    const raw = encodeRaw(items);
+    const gz = window.pako.gzip(raw, { level: 9 });
+    return toBase64Url(gz);
+  }
+  function decodeFromBase64UrlGzip(token) {
+    const gz = fromBase64Url(token);
+    const raw = window.pako.ungzip(gz);
+    return decodeRaw(raw);
+  }
+</script>

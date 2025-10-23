@@ -290,6 +290,23 @@ describe('Route bitpacking decoder', () => {
     expect(br.readBits(4)).toBe(0b1010);
   });
   
+  it('should handle reading across byte boundaries', () => {
+    const buf = new Uint8Array([0b11111111, 0b00000000]);
+    const br = new BitReader(buf);
+    
+    expect(br.readBits(6)).toBe(0b111111);
+    expect(br.readBits(6)).toBe(0b110000);
+    expect(br.readBits(4)).toBe(0b0000);
+  });
+  
+  it('should throw error on EOF', () => {
+    const buf = new Uint8Array([0b10101010]);
+    const br = new BitReader(buf);
+    
+    br.readBits(8);
+    expect(() => br.readBits(1)).toThrow('Unexpected EOF');
+  });
+  
   it('should convert base64url to bytes', () => {
     const fromBase64Url = (s) => {
       s = s.replace(/-/g, '+').replace(/_/g, '/');
@@ -329,5 +346,62 @@ describe('Route bitpacking decoder', () => {
     expect(fromBase64Url('YQ')).toBe('YQ==');
     expect(fromBase64Url('YWI')).toBe('YWI=');
     expect(fromBase64Url('YWJj')).toBe('YWJj');
+  });
+  
+  it('should handle base64url special characters', () => {
+    const fromBase64Url = (s) => {
+      s = s.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = s.length % 4;
+      if (pad === 2) s += '==';
+      else if (pad === 3) s += '=';
+      return s;
+    };
+    
+    // Base64url uses - and _ instead of + and /
+    // Length 5, 5 % 4 = 1, so no padding added
+    expect(fromBase64Url('a-b_c')).toBe('a+b/c');
+    
+    // Test with length that needs padding
+    expect(fromBase64Url('a-')).toBe('a+==');
+    expect(fromBase64Url('a-b')).toBe('a+b=');
+  });
+  
+  it('should validate route data header', () => {
+    // Simulate decodeRawBitPacked validation logic
+    const validateHeader = (buf) => {
+      if (buf.length < 4) throw new Error('Route data too short');
+      if (buf[0] !== 1) throw new Error('Unsupported route version');
+      const k = buf[1];
+      if (k <= 0 || k > 30) throw new Error('Invalid route bit width');
+      return true;
+    };
+    
+    // Valid header
+    const validBuf = new Uint8Array([1, 20, 0, 3]); // version=1, k=20, count=3
+    expect(validateHeader(validBuf)).toBe(true);
+    
+    // Too short
+    expect(() => validateHeader(new Uint8Array([1, 2]))).toThrow('Route data too short');
+    
+    // Wrong version
+    expect(() => validateHeader(new Uint8Array([2, 20, 0, 3]))).toThrow('Unsupported route version');
+    
+    // Invalid k
+    expect(() => validateHeader(new Uint8Array([1, 0, 0, 3]))).toThrow('Invalid route bit width');
+    expect(() => validateHeader(new Uint8Array([1, 31, 0, 3]))).toThrow('Invalid route bit width');
+  });
+  
+  it('should decode waypoint count from header', () => {
+    const buf = new Uint8Array([1, 20, 0, 5]); // count = 5 in big-endian
+    const view = new DataView(buf.buffer);
+    const count = view.getUint16(2, false); // big-endian
+    expect(count).toBe(5);
+  });
+  
+  it('should decode waypoint count with high byte', () => {
+    const buf = new Uint8Array([1, 20, 1, 0]); // count = 256 in big-endian
+    const view = new DataView(buf.buffer);
+    const count = view.getUint16(2, false);
+    expect(count).toBe(256);
   });
 });

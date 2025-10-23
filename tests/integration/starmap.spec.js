@@ -250,6 +250,41 @@ test.describe('Starmap Application', () => {
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
   });
 
+  test('should handle corrupted route token gracefully', async ({ page }) => {
+    // Use the actual corrupted token from the user
+    const corruptedToken = 'H4sIAAAAAAAAE-2NQQrCMAwEX7Mlz7iOJPoC6xHR5a0mTbv_5wi1x9NsZzjFPTUpBg6-RTKhuwrV0TdLq1Ryo8qYWOGFkTwc7E2vZPExf6q0r3xra14pDDAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${corruptedToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    // App should still load despite bad route
+    const canvas = page.locator('canvas');
+    await expect(canvas).toBeVisible({ timeout: 10000 });
+    
+    // Should see error message in debug log
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible();
+    const content = await debugPanel.textContent();
+    expect(content).toContain('failed to decode route');
+  });
+
+  test('should render route with valid token', async ({ page }) => {
+    // Valid token generated from test-encode.cjs
+    const validToken = 'H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${validToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    // Should see route table
+    const routeTable = page.locator('#route-table');
+    await expect(routeTable).toBeVisible({ timeout: 5000 });
+    
+    // Should see waypoints in table
+    const tableRows = routeTable.locator('tbody tr');
+    const rowCount = await tableRows.count();
+    expect(rowCount).toBe(3); // 3 waypoints in the test token
+  });
+
   test('should not show route table without route parameter', async ({ page }) => {
     const routeTable = page.locator('#route-table');
     expect(await routeTable.count()).toBe(0);

@@ -122,6 +122,37 @@ The route table will appear even when focused on a specific system.
 - Systems not in dataset are marked invalid but don't crash rendering
 - Missing systems are filtered from line rendering
 
+### Common Errors
+
+**"Route token contains corrupted gzip data"**
+- The token may be incomplete or truncated when copying
+- Ensure the entire token is copied from start to finish
+- Check for missing characters at the end
+- Try regenerating the token if possible
+
+**"Route token has invalid gzip header"**
+- Token may be malformed or not actually gzipped
+- Verify the token was generated with the correct encoding function
+- Check for URL encoding issues (spaces, special chars)
+
+**"Browser does not support route decompression"**
+- Update to a modern browser:
+  - Chrome 80+ (released Feb 2020)
+  - Firefox 113+ (released May 2023)
+  - Safari 16.4+ (released March 2023)
+  - Edge 80+ (released Feb 2020)
+
+### Testing Tokens
+
+Before sharing route tokens, test them locally:
+
+```bash
+# Generate and test in one command
+node -e "const {encodeToBase64UrlGzip} = require('./src/bitpacking.js'); const token = encodeToBase64UrlGzip([{Id:30000142,Type:1}]); console.log('Test URL: http://localhost:3000/public/?debug=true&route=' + token);"
+```
+
+Then visit the printed URL to verify it loads correctly.
+
 ## Development
 
 ### Testing Routes Locally
