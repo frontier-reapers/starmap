@@ -1,6 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'https://unpkg.com/three@0.160.0/examples/jsm/renderers/CSS2DRenderer.js';
+import { decodeRouteToken, getWaypointTypeLabel } from './route-decoder.js';
 
 // --- Debug logging helper --------------------------------------------------
 // Check if debug mode is enabled via URL query parameter (?debug=true)
@@ -281,6 +282,203 @@ function makeJumpLines(jumps, indexOf, positions) {
   return lines;
 }
 
+function makeRouteLines(waypoints, indexOf, positions, idToName) {
+  // Create cyan line segments connecting route waypoints in order
+  if (waypoints.length < 2) return null;
+  
+  const validWaypoints = waypoints.filter(wp => indexOf.has(wp.Id));
+  if (validWaypoints.length < 2) {
+    debugLog('makeRouteLines: insufficient valid waypoints', validWaypoints.length);
+    return null;
+  }
+  
+  debugLog('makeRouteLines: creating route with', validWaypoints.length, 'waypoints');
+  
+  const segCount = validWaypoints.length - 1;
+  const linePos = new Float32Array(segCount * 2 * 3);
+  const lineCol = new Float32Array(segCount * 2 * 3);
+  
+  let w = 0;
+  for (let i = 0; i < validWaypoints.length - 1; i++) {
+    const fromId = validWaypoints[i].Id;
+    const toId = validWaypoints[i + 1].Id;
+    const fromIdx = indexOf.get(fromId);
+    const toIdx = indexOf.get(toId);
+    
+    const fx = positions[fromIdx * 3 + 0];
+    const fy = positions[fromIdx * 3 + 1];
+    const fz = positions[fromIdx * 3 + 2];
+    const tx = positions[toIdx * 3 + 0];
+    const ty = positions[toIdx * 3 + 1];
+    const tz = positions[toIdx * 3 + 2];
+    
+    linePos[w++] = fx; linePos[w++] = fy; linePos[w++] = fz;
+    linePos[w++] = tx; linePos[w++] = ty; linePos[w++] = tz;
+  }
+  
+  // Cyan color: rgb(0, 255, 255)
+  for (let i = 0; i < lineCol.length; i += 3) {
+    lineCol[i] = 0.0;     // R
+    lineCol[i + 1] = 1.0; // G
+    lineCol[i + 2] = 1.0; // B
+  }
+  
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+  geom.setAttribute('color', new THREE.BufferAttribute(lineCol, 3));
+  const mat = new THREE.LineBasicMaterial({ 
+    vertexColors: true, 
+    transparent: true, 
+    opacity: 0.8,
+    linewidth: 2 // Note: may not work in WebGL
+  });
+  const lines = new THREE.LineSegments(geom, mat);
+  lines.frustumCulled = false;
+  
+  return lines;
+}
+
+// --- Route table UI functions ---
+
+function createRouteTable(waypoints) {
+  const table = document.createElement('div');
+  table.id = 'route-table';
+  
+  // Restore position from localStorage or use default
+  const savedPos = localStorage.getItem('routeTablePosition');
+  if (savedPos) {
+    try {
+      const { top, right } = JSON.parse(savedPos);
+      table.style.top = top + 'px';
+      table.style.right = right + 'px';
+    } catch (e) {
+      /* ignore invalid storage */ 
+    }
+  }
+  
+  // Create title
+  const title = document.createElement('h3');
+  title.textContent = `Route (${waypoints.length} waypoints)`;
+  table.appendChild(title);
+  
+  // Create table
+  const tableEl = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  
+  const headers = ['#', 'Type', 'System'];
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  tableEl.appendChild(thead);
+  
+  const tbody = document.createElement('tbody');
+  waypoints.forEach((wp, idx) => {
+    const row = document.createElement('tr');
+    
+    const stepCell = document.createElement('td');
+    stepCell.className = 'step-number';
+    stepCell.textContent = (idx + 1).toString();
+    row.appendChild(stepCell);
+    
+    const typeCell = document.createElement('td');
+    typeCell.className = 'waypoint-type';
+    typeCell.textContent = getWaypointTypeLabel(wp.Type);
+    row.appendChild(typeCell);
+    
+    const nameCell = document.createElement('td');
+    nameCell.textContent = wp.name;
+    if (!wp.valid) {
+      nameCell.style.color = '#ff5555';
+      nameCell.title = 'System not found in dataset';
+    }
+    row.appendChild(nameCell);
+    
+    tbody.appendChild(row);
+  });
+  tableEl.appendChild(tbody);
+  table.appendChild(tableEl);
+  
+  // Make draggable
+  makeDraggable(table);
+  
+  return table;
+}
+
+function makeDraggable(element) {
+  let isDragging = false;
+  let startX, startY, startRight, startTop;
+  
+  element.addEventListener('mousedown', (e) => {
+    // Only start drag if clicking on the element itself or header, not table rows
+    if (e.target.tagName === 'TD' || e.target.tagName === 'TR') return;
+    
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // Get current position (right and top)
+    const rect = element.getBoundingClientRect();
+    startRight = window.innerWidth - rect.right;
+    startTop = rect.top;
+    
+    e.preventDefault();
+  });
+  
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    const newTop = startTop + dy;
+    const newRight = startRight - dx;
+    
+    element.style.top = newTop + 'px';
+    element.style.right = newRight + 'px';
+  });
+  
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      
+      // Ensure element is in viewport
+      ensureRouteTableInViewport(element);
+      
+      // Save position to localStorage
+      const rect = element.getBoundingClientRect();
+      const position = {
+        top: rect.top,
+        right: window.innerWidth - rect.right
+      };
+      localStorage.setItem('routeTablePosition', JSON.stringify(position));
+    }
+  });
+}
+
+function ensureRouteTableInViewport(element) {
+  const rect = element.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  
+  let top = rect.top;
+  let right = vw - rect.right;
+  
+  // Ensure top is within viewport
+  if (top < 0) top = 10;
+  if (top + rect.height > vh) top = vh - rect.height - 10;
+  
+  // Ensure right is within viewport
+  if (right < 0) right = 10;
+  if (vw - right < rect.width) right = vw - rect.width - 10;
+  
+  element.style.top = top + 'px';
+  element.style.right = right + 'px';
+}
+
 (async function main(){
   debugLog('main: starting');
   const container = document.getElementById('app');
@@ -377,6 +575,36 @@ function makeJumpLines(jumps, indexOf, positions) {
   if (focusParam) {
     debugLog('main: focus parameter detected', focusParam);
     focusOnSystem(focusParam);
+  }
+  
+  // --- Route functionality ---
+  let routeWaypoints = null;
+  let routeLines = null;
+  const routeParam = urlParams.get('route');
+  
+  if (routeParam) {
+    try {
+      debugLog('main: route parameter detected, decoding...');
+      routeWaypoints = await decodeRouteToken(routeParam);
+      debugLog('main: decoded', routeWaypoints.length, 'waypoints');
+      
+      // Validate and enrich waypoints with system names
+      routeWaypoints = routeWaypoints.map(wp => ({
+        ...wp,
+        name: data.idToName[String(wp.Id)] || `System ${wp.Id}`,
+        valid: data.indexOf.has(wp.Id)
+      }));
+      
+      // Create route visualization
+      routeLines = makeRouteLines(routeWaypoints, data.indexOf, data.positions, data.idToName);
+      if (routeLines) {
+        scene.add(routeLines);
+        debugLog('main: route lines added to scene');
+      }
+    } catch (err) {
+      debugLog('main: failed to decode route', err.message);
+      console.error('Route decoding error:', err);
+    }
   }
 
   // Debug output: geometry attributes and renderer/camera state
@@ -476,12 +704,25 @@ function makeJumpLines(jumps, indexOf, positions) {
     };
   }
   const hoverStep = updateHover();
+  
+  // --- Route table UI ---
+  if (routeWaypoints && routeWaypoints.length > 0) {
+    const routeTable = createRouteTable(routeWaypoints);
+    container.appendChild(routeTable);
+    debugLog('main: route table UI added');
+  }
 
   function onResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    
+    // Check if route table is out of bounds
+    const routeTable = document.getElementById('route-table');
+    if (routeTable) {
+      ensureRouteTableInViewport(routeTable);
+    }
   }
   window.addEventListener('resize', onResize);
 

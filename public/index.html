@@ -54,6 +54,100 @@
     }
     
     canvas { display:block; }
+    
+    #route-table {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      cursor: move;
+      user-select: none;
+      
+      /* Cyan-tinted glassmorphism */
+      background: linear-gradient(
+        135deg,
+        rgba(0, 255, 255, 0.12) 0%,
+        rgba(0, 200, 255, 0.08) 50%,
+        rgba(0, 255, 255, 0.06) 100%
+      );
+      
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      border-radius: 12px;
+      
+      box-shadow: 
+        0 8px 24px rgba(0, 255, 255, 0.2),
+        0 4px 12px rgba(0, 200, 255, 0.15),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+      
+      padding: 16px;
+      font-family: 'Disket Mono', monospace;
+      
+      transition: box-shadow 0.2s ease;
+    }
+    
+    #route-table:active {
+      box-shadow: 
+        0 12px 32px rgba(0, 255, 255, 0.3),
+        0 6px 16px rgba(0, 200, 255, 0.2),
+        inset 0 1px 1px rgba(255, 255, 255, 0.15),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+    }
+    
+    #route-table h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: #00ffff;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+      font-weight: bold;
+    }
+    
+    #route-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    
+    #route-table th {
+      text-align: left;
+      padding: 8px 6px;
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+      font-weight: bold;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    #route-table td {
+      padding: 6px;
+      color: #e0f7fa;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+    }
+    
+    #route-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    #route-table tr:hover {
+      background: rgba(0, 255, 255, 0.08);
+    }
+    
+    #route-table .step-number {
+      color: #00e5ff;
+      font-weight: bold;
+      min-width: 30px;
+    }
+    
+    #route-table .waypoint-type {
+      color: #80deea;
+      font-size: 11px;
+    }
   </style>
   <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
   <script type="importmap">

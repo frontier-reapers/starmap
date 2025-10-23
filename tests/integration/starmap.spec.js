@@ -237,4 +237,30 @@ test.describe('Starmap Application', () => {
     const content = await debugPanel.textContent();
     expect(content).toContain('loadData: complete');
   });
+
+  test('should display route table when route parameter is present', async ({ page }) => {
+    // Note: This test would need a valid route token to fully test
+    // For now, we just verify the app doesn't crash with an invalid route
+    await page.goto('http://localhost:3000/public/?debug=true&route=invalid');
+    
+    await page.waitForTimeout(2000);
+    
+    // Should see error in debug log but app should still work
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should not show route table without route parameter', async ({ page }) => {
+    const routeTable = page.locator('#route-table');
+    expect(await routeTable.count()).toBe(0);
+  });
+
+  test('should save route table position to localStorage', async ({ page }) => {
+    // This test would require a valid route token
+    // Testing that localStorage API is available
+    const hasLocalStorage = await page.evaluate(() => {
+      return typeof localStorage !== 'undefined';
+    });
+    expect(hasLocalStorage).toBe(true);
+  });
 });

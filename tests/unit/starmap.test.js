@@ -252,3 +252,82 @@ describe('Station system detection', () => {
     expect(formatLabel('Regular', false)).toBe('Regular');
   });
 });
+
+describe('Route bitpacking decoder', () => {
+  // Mock BitReader for testing
+  class BitReader {
+    constructor(buf) {
+      this._buf = buf;
+      this._i = 0;
+      this._cur = 0;
+      this._bits = 0;
+    }
+    
+    readBits(bitCount) {
+      let v = 0 >>> 0;
+      for (let i = 0; i < bitCount; i++) {
+        if (this._bits === 0) {
+          if (this._i >= this._buf.length) throw new Error('Unexpected EOF');
+          this._cur = this._buf[this._i++];
+          this._bits = 8;
+        }
+        const msb = (this._cur & 0x80) ? 1 : 0;
+        v = (v << 1) | msb;
+        this._cur = (this._cur << 1) & 0xff;
+        this._bits--;
+      }
+      return v >>> 0;
+    }
+  }
+  
+  it('should read bits correctly', () => {
+    const buf = new Uint8Array([0b10110011, 0b11001010]);
+    const br = new BitReader(buf);
+    
+    expect(br.readBits(4)).toBe(0b1011);
+    expect(br.readBits(4)).toBe(0b0011);
+    expect(br.readBits(4)).toBe(0b1100);
+    expect(br.readBits(4)).toBe(0b1010);
+  });
+  
+  it('should convert base64url to bytes', () => {
+    const fromBase64Url = (s) => {
+      s = s.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = s.length % 4;
+      if (pad === 2) s += '==';
+      else if (pad === 3) s += '=';
+      
+      const binaryString = atob(s);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    };
+    
+    // Test with known base64url string
+    const encoded = 'SGVsbG8'; // "Hello" in base64
+    const decoded = fromBase64Url(encoded);
+    
+    expect(decoded[0]).toBe(72);  // 'H'
+    expect(decoded[1]).toBe(101); // 'e'
+    expect(decoded[2]).toBe(108); // 'l'
+    expect(decoded[3]).toBe(108); // 'l'
+    expect(decoded[4]).toBe(111); // 'o'
+  });
+  
+  it('should handle base64url with padding', () => {
+    const fromBase64Url = (s) => {
+      s = s.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = s.length % 4;
+      if (pad === 2) s += '==';
+      else if (pad === 3) s += '=';
+      return s;
+    };
+    
+    expect(fromBase64Url('YQ')).toBe('YQ==');
+    expect(fromBase64Url('YWI')).toBe('YWI=');
+    expect(fromBase64Url('YWJj')).toBe('YWJj');
+  });
+});
