@@ -3,7 +3,18 @@ import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/cont
 import { CSS2DRenderer, CSS2DObject } from 'https://unpkg.com/three@0.160.0/examples/jsm/renderers/CSS2DRenderer.js';
 
 // --- Debug logging helper --------------------------------------------------
+// Check if debug mode is enabled via URL query parameter (?debug=true)
+const DEBUG_ENABLED = (() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('debug') === 'true';
+  } catch (e) {
+    return false;
+  }
+})();
+
 function _makeDebugPanel(){
+  if (!DEBUG_ENABLED) return null;
   try {
     let panel = document.getElementById('debug-log');
     if (!panel) {
@@ -30,7 +41,9 @@ function _makeDebugPanel(){
 
 function debugLog(...args){
   try {
-    console.log(...args);
+    if (DEBUG_ENABLED) {
+      console.log(...args);
+    }
     const panel = _makeDebugPanel();
     if (panel) {
       const ts = new Date().toISOString();
