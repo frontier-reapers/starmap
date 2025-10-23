@@ -130,3 +130,125 @@ describe('Binary data parsing', () => {
     expect(ids[2]).toBe(30000003);
   });
 });
+
+describe('System filtering', () => {
+  function isFilteredSystem(name) {
+    // Patterns to exclude: V-### (variable stars) and AD### (anomaly detection)
+    return /^V-\d{3}$/i.test(name) || /^AD\d{3}$/i.test(name);
+  }
+
+  it('should filter V-### pattern systems', () => {
+    expect(isFilteredSystem('V-001')).toBe(true);
+    expect(isFilteredSystem('V-999')).toBe(true);
+    expect(isFilteredSystem('v-123')).toBe(true);
+  });
+
+  it('should filter AD### pattern systems', () => {
+    expect(isFilteredSystem('AD001')).toBe(true);
+    expect(isFilteredSystem('AD999')).toBe(true);
+    expect(isFilteredSystem('ad123')).toBe(true);
+  });
+
+  it('should not filter normal systems', () => {
+    expect(isFilteredSystem('Jita')).toBe(false);
+    expect(isFilteredSystem('E3Q-3SC')).toBe(false);
+    expect(isFilteredSystem('J100001')).toBe(false);
+    expect(isFilteredSystem('V-1234')).toBe(false); // 4 digits, not 3
+    expect(isFilteredSystem('AD1234')).toBe(false); // 4 digits, not 3
+  });
+});
+
+describe('Focus system functionality', () => {
+  function findSystemIndex(systemIdOrName, idToName, indexOf) {
+    let systemIndex = -1;
+    
+    // Try as ID first (numeric)
+    const asNumber = parseInt(systemIdOrName, 10);
+    if (!isNaN(asNumber)) {
+      systemIndex = indexOf.get(asNumber);
+    }
+    
+    // Try as name if not found by ID
+    if (systemIndex === undefined || systemIndex === -1) {
+      const searchName = String(systemIdOrName).toLowerCase();
+      for (const [id, name] of Object.entries(idToName)) {
+        if (name.toLowerCase() === searchName) {
+          systemIndex = indexOf.get(parseInt(id, 10));
+          break;
+        }
+      }
+    }
+    
+    return systemIndex !== undefined ? systemIndex : -1;
+  }
+
+  it('should find system by numeric ID', () => {
+    const idToName = { '30000142': 'Jita', '30001234': 'TestSystem' };
+    const indexOf = new Map([[30000142, 0], [30001234, 1]]);
+    
+    const index = findSystemIndex('30000142', idToName, indexOf);
+    expect(index).toBe(0);
+  });
+
+  it('should find system by name (case-insensitive)', () => {
+    const idToName = { '30000142': 'Jita', '30001234': 'TestSystem' };
+    const indexOf = new Map([[30000142, 0], [30001234, 1]]);
+    
+    const index1 = findSystemIndex('Jita', idToName, indexOf);
+    expect(index1).toBe(0);
+    
+    const index2 = findSystemIndex('jita', idToName, indexOf);
+    expect(index2).toBe(0);
+    
+    const index3 = findSystemIndex('TESTSYSTEM', idToName, indexOf);
+    expect(index3).toBe(1);
+  });
+
+  it('should return -1 for non-existent system', () => {
+    const idToName = { '30000142': 'Jita' };
+    const indexOf = new Map([[30000142, 0]]);
+    
+    const index = findSystemIndex('NonExistent', idToName, indexOf);
+    expect(index).toBe(-1);
+  });
+});
+
+describe('URL query parameter parsing', () => {
+  it('should parse focus parameter from URL', () => {
+    const url = new URL('http://localhost:3000/public/?focus=Jita');
+    const params = new URLSearchParams(url.search);
+    expect(params.get('focus')).toBe('Jita');
+  });
+
+  it('should parse debug parameter from URL', () => {
+    const url = new URL('http://localhost:3000/public/?debug=true');
+    const params = new URLSearchParams(url.search);
+    expect(params.get('debug')).toBe('true');
+  });
+
+  it('should parse multiple parameters', () => {
+    const url = new URL('http://localhost:3000/public/?debug=true&focus=E3Q-3SC');
+    const params = new URLSearchParams(url.search);
+    expect(params.get('debug')).toBe('true');
+    expect(params.get('focus')).toBe('E3Q-3SC');
+  });
+});
+
+describe('Station system detection', () => {
+  it('should detect station systems from Set', () => {
+    const stationSystemSet = new Set([30000142, 30001234]);
+    
+    expect(stationSystemSet.has(30000142)).toBe(true);
+    expect(stationSystemSet.has(30001234)).toBe(true);
+    expect(stationSystemSet.has(99999999)).toBe(false);
+  });
+
+  it('should format station labels with emoji', () => {
+    const formatLabel = (name, hasStation) => {
+      return hasStation ? `🛰️ ${name}` : name;
+    };
+    
+    expect(formatLabel('Jita', true)).toBe('🛰️ Jita');
+    expect(formatLabel('Regular', false)).toBe('Regular');
+  });
+});

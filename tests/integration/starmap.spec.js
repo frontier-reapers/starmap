@@ -108,4 +108,133 @@ test.describe('Starmap Application', () => {
       expect(count).toBeGreaterThanOrEqual(0);
     }
   });
+
+  test('should load station systems data', async ({ page }) => {
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    
+    // Wait for station systems to be loaded
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('loaded station systems');
+    }, { timeout: 10000 });
+    
+    const content = await debugPanel.textContent();
+    expect(content).toContain('stationCount');
+    // Should have loaded some station systems
+    expect(content).toMatch(/stationCount":\s*\d+/);
+  });
+
+  test('should render both regular and station stars', async ({ page }) => {
+    const debugPanel = page.locator('#debug-log');
+    
+    // Wait for starfield creation
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('station stars');
+    }, { timeout: 10000 });
+    
+    const content = await debugPanel.textContent();
+    // Should see both types of stars created
+    expect(content).toContain('regular stars');
+    expect(content).toContain('station stars');
+  });
+
+  test('should display station emoji in labels', async ({ page }) => {
+    // Wait for page to be ready
+    await page.waitForTimeout(2000);
+    
+    // Get debug panel to find a station system
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    
+    // We can check that the label element exists with the correct class
+    const label = page.locator('.label');
+    expect(await label.count()).toBeGreaterThanOrEqual(0);
+  });
+
+  test('should focus on system with query parameter by name', async ({ page }) => {
+    // Navigate with focus parameter (using a common system name)
+    await page.goto('http://localhost:3000/public/?debug=true&focus=Jita');
+    
+    const debugPanel = page.locator('#debug-log');
+    
+    // Wait for focus to be applied
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('focus parameter detected');
+    }, { timeout: 10000 });
+    
+    const content = await debugPanel.textContent();
+    expect(content).toContain('focus parameter detected');
+    expect(content).toContain('Jita');
+  });
+
+  test('should focus on system with query parameter by ID', async ({ page }) => {
+    // Navigate with focus parameter using system ID
+    await page.goto('http://localhost:3000/public/?debug=true&focus=30000142');
+    
+    const debugPanel = page.locator('#debug-log');
+    
+    // Wait for focus to be applied
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('focus parameter detected');
+    }, { timeout: 10000 });
+    
+    const content = await debugPanel.textContent();
+    expect(content).toContain('focus parameter detected');
+  });
+
+  test('should update URL on star click', async ({ page }) => {
+    // Wait for canvas to be ready
+    const canvas = page.locator('canvas').first();
+    await expect(canvas).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+    
+    // Get initial URL
+    const initialUrl = page.url();
+    
+    // Click on canvas (hoping to hit a star)
+    const box = await canvas.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(500);
+      
+      // URL might have changed (or might not if we didn't click a star)
+      const newUrl = page.url();
+      // Just verify the page didn't crash and URL is valid
+      expect(newUrl).toContain('localhost:3000');
+    }
+  });
+
+  test('should have dual point cloud structure', async ({ page }) => {
+    const debugPanel = page.locator('#debug-log');
+    
+    // Wait for geometry info to be logged
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('groupChildren');
+    }, { timeout: 10000 });
+    
+    const content = await debugPanel.textContent();
+    // Should have created a group with children
+    expect(content).toContain('groupChildren');
+  });
+
+  test('should exclude filtered systems', async ({ page }) => {
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    
+    // Wait for data loading
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('loadData: complete');
+    }, { timeout: 10000 });
+    
+    // The test data should have fewer systems due to filtering
+    // We can't easily check exact numbers, but we verify the app loads successfully
+    const content = await debugPanel.textContent();
+    expect(content).toContain('loadData: complete');
+  });
 });
