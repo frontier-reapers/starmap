@@ -1,0 +1,27 @@
+{
+  "counts": {
+    "systems": 24426,
+    "jumps": 7408
+  },
+  "schema": {
+    "systems_positions.bin": {
+      "type": "Float32Array",
+      "components": 3
+    },
+    "systems_ids.bin": {
+      "type": "Uint32Array"
+    },
+    "systems_names.json": {
+      "type": "MapIdToName"
+    },
+    "jumps.bin": {
+      "type": "Uint32Array",
+      "components": 2,
+      "meaning": "pairs of system IDs [a,b]"
+    }
+  },
+  "coord_system": {
+    "units": "lightyears",
+    "transform": "Rx(-90deg), i.e., (x,y,z)->(x,z,-y)"
+  }
+}

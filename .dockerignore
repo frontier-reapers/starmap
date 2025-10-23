@@ -1,0 +1,43 @@
+# Git
+.git/
+.gitignore
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Tests
+tests/
+playwright-report/
+test-results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Build artifacts
+dist/
+.cache/
+
+# Docs
+docs/
+*.md
+
+# Data (keep only what's needed)
+data/static.db
+data/inspect_db.py
+
+# Misc
+.DS_Store
+Thumbs.db

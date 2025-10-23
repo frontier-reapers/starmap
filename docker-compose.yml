@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Web application server
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - "8080:80"
+    container_name: starmap-web
+    restart: unless-stopped
+
+  # Data builder (run once to generate files)
+  data-builder:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.data
+    volumes:
+      - ./data/static.db:/app/data/static.db:ro
+      - ./public/data:/app/output
+    container_name: starmap-data-builder
+    profiles:
+      - tools  # Only run when explicitly requested

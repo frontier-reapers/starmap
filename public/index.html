@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Starmap (three.js)</title>
+  <style>
+    html, body, #app { margin:0; padding:0; height:100%; background:#000; color:#ddd; font-family: system-ui, sans-serif; }
+    #overlay { position: absolute; top:10px; left:10px; background: rgba(0,0,0,0.5); padding:8px 10px; border-radius:8px; font-size:12px; }
+    .label { color:#fff; font-size:12px; text-shadow: 0 0 4px rgba(255,255,255,0.9); pointer-events:none; }
+    canvas { display:block; }
+  </style>
+  <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/": "https://unpkg.com/three@0.160.0/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="overlay">Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan</div>
+  <script type="module" src="../src/main.js"></script>
+</body>
+</html>

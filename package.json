@@ -1,0 +1,36 @@
+{
+  "name": "starmap",
+  "version": "1.0.0",
+  "description": "3D star map visualization using three.js",
+  "type": "module",
+  "scripts": {
+    "dev": "npx http-server . -p 3000 -c-1",
+    "test": "npm run test:unit:js && npm run test:unit:py",
+    "test:unit": "npm run test:unit:js && npm run test:unit:py",
+    "test:unit:js": "vitest run tests/unit",
+    "test:unit:py": "python -m pytest tests/unit/test_build_data.py -v",
+    "test:integration": "playwright test",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "test:watch": "vitest tests/unit",
+    "build:data": "python data/build_data.py --db data/static.db --out public/data",
+    "docker:build:web": "docker build -f docker/Dockerfile.web -t starmap-web .",
+    "docker:build:data": "docker build -f docker/Dockerfile.data -t starmap-data .",
+    "docker:run:web": "docker run -p 8080:80 starmap-web",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^8.55.0",
+    "http-server": "^14.1.1",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "threejs",
+    "visualization",
+    "starmap",
+    "3d"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+# Dockerfile for building starmap data from SQLite database
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy build script
+COPY data/build_data.py /app/
+
+# Create output directory
+RUN mkdir -p /app/output
+
+# The script expects:
+# - Input: /app/data/static.db (mount as volume)
+# - Output: /app/output (mount as volume)
+#
+# Usage:
+#   docker run -v /path/to/static.db:/app/data/static.db \
+#              -v /path/to/output:/app/output \
+#              starmap-data-builder
+#
+ENTRYPOINT ["python", "build_data.py", "--db", "/app/data/static.db", "--out", "/app/output"]

@@ -1,0 +1,6 @@
+# Python dependencies for starmap data processing
+# Currently using only Python stdlib, but this file is here for future dependencies
+
+# For testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
