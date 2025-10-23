@@ -285,6 +285,53 @@ test.describe('Starmap Application', () => {
     expect(rowCount).toBe(3); // 3 waypoints in the test token
   });
 
+  test('should render 17-waypoint Strym route', async ({ page }) => {
+    // Real-world route: Strym -> Z:2V39 -> ... -> IGJ-PSH (17 waypoints)
+    // Mix of waypoint types: 0=Waypoint, 1=Station, 2=Citadel
+    const strymRouteToken = 'H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${strymRouteToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    // Should see route table
+    const routeTable = page.locator('#route-table');
+    await expect(routeTable).toBeVisible({ timeout: 5000 });
+    
+    // Verify table title shows correct count
+    const title = routeTable.locator('h3');
+    await expect(title).toContainText('17 waypoints');
+    
+    // Should see all 17 waypoints in table
+    const tableRows = routeTable.locator('tbody tr');
+    const rowCount = await tableRows.count();
+    expect(rowCount).toBe(17);
+    
+    // Verify first waypoint is Strym (Type: Waypoint)
+    const firstRow = tableRows.nth(0);
+    await expect(firstRow.locator('.step-number')).toContainText('1');
+    await expect(firstRow.locator('.waypoint-type')).toContainText('Waypoint');
+    
+    // Verify a citadel waypoint (Z:2V39 is second, Type: Citadel)
+    const secondRow = tableRows.nth(1);
+    await expect(secondRow.locator('.step-number')).toContainText('2');
+    await expect(secondRow.locator('.waypoint-type')).toContainText('Citadel');
+    
+    // Verify a station waypoint (OKK-0PH is 11th, Type: Station)
+    const eleventhRow = tableRows.nth(10);
+    await expect(eleventhRow.locator('.step-number')).toContainText('11');
+    await expect(eleventhRow.locator('.waypoint-type')).toContainText('Station');
+    
+    // Verify last waypoint (IGJ-PSH is 17th, Type: Station)
+    const lastRow = tableRows.nth(16);
+    await expect(lastRow.locator('.step-number')).toContainText('17');
+    await expect(lastRow.locator('.waypoint-type')).toContainText('Station');
+    
+    // Verify route lines are rendered on the map
+    const debugPanel = page.locator('#debug-log');
+    const content = await debugPanel.textContent();
+    expect(content).toContain('route lines added to scene');
+  });
+
   test('should not show route table without route parameter', async ({ page }) => {
     const routeTable = page.locator('#route-table');
     expect(await routeTable.count()).toBe(0);

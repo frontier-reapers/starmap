@@ -60,14 +60,49 @@ function toBase64Url(buf) {
   return buf.toString("base64").replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-const waypoints = [
+// Test route 1: Simple 3 waypoints
+const waypoints1 = [
   {Id: 30000142, Type: 1},
   {Id: 30002187, Type: 0},
   {Id: 30000144, Type: 1}
 ];
 
-const raw = encodeRawBitPacked(waypoints);
-const gz = zlib.gzipSync(raw, { level: zlib.constants.Z_BEST_COMPRESSION });
-const token = toBase64Url(gz);
+const raw1 = encodeRawBitPacked(waypoints1);
+const gz1 = zlib.gzipSync(raw1, { level: zlib.constants.Z_BEST_COMPRESSION });
+const token1 = toBase64Url(gz1);
 
-console.log('Valid token:', token);
+console.log('Simple 3-waypoint route token:', token1);
+console.log('');
+
+// Test route 2: User-provided 17 waypoint route from Strym
+const waypoints2 = [
+  {Id: 30009542, Type: 0},  // Strym - Waypoint
+  {Id: 30009551, Type: 2},  // Z:2V39 - Citadel
+  {Id: 30009547, Type: 2},  // Q:374K - Citadel
+  {Id: 30009538, Type: 2},  // Mandr - Citadel
+  {Id: 30009554, Type: 2},  // G:2TV3 - Citadel
+  {Id: 30009555, Type: 2},  // G:34SV - Citadel
+  {Id: 30009557, Type: 2},  // Q:13N6 - Citadel
+  {Id: 30009570, Type: 2},  // U:39A3 - Citadel
+  {Id: 30009569, Type: 2},  // Z:3N5K - Citadel
+  {Id: 30009571, Type: 2},  // B:37EI - Citadel
+  {Id: 30009302, Type: 1},  // OKK-0PH - Station
+  {Id: 30009299, Type: 1},  // I4F-MCH - Station
+  {Id: 30009301, Type: 1},  // OCC-L8H - Station
+  {Id: 30009297, Type: 1},  // EBG-P8H - Station
+  {Id: 30009260, Type: 2},  // E4N-48H - Citadel
+  {Id: 30009263, Type: 2},  // IVK-HJH - Citadel
+  {Id: 30011605, Type: 1},  // IGJ-PSH - Station
+];
+
+const raw2 = encodeRawBitPacked(waypoints2);
+const gz2 = zlib.gzipSync(raw2, { level: zlib.constants.Z_BEST_COMPRESSION });
+const token2 = toBase64Url(gz2);
+
+console.log('17-waypoint Strym route token:', token2);
+console.log('Token length:', token2.length);
+console.log('Gzipped size:', gz2.length, 'bytes');
+console.log('Uncompressed size:', raw2.length, 'bytes');
+console.log('');
+console.log('Test URL:');
+console.log(`http://localhost:3000/public/?debug=true&route=${token2}`);
