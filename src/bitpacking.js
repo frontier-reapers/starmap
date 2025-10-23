@@ -21,7 +21,7 @@ const BASE_ID = 30_000_000;
 
 function encodeRawBitPacked(items) {
   let maxOffset = 0;
-  for (const { Id, Type } of items) {
+  for (const { Id } of items) {
     const off = Id - BASE_ID;
     if (off < 0) throw new Error("Id < BaseId");
     if (off > maxOffset) maxOffset = off;

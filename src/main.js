@@ -282,7 +282,7 @@ function makeJumpLines(jumps, indexOf, positions) {
   return lines;
 }
 
-function makeRouteLines(waypoints, indexOf, positions, idToName) {
+function makeRouteLines(waypoints, indexOf, positions) {
   // Create cyan line segments connecting route waypoints in order
   if (waypoints.length < 2) return null;
   
@@ -754,7 +754,7 @@ function ensureRouteTableInViewport(element) {
   }
   
   // Handle browser back/forward navigation
-  window.addEventListener('popstate', (event) => {
+  window.addEventListener('popstate', () => {
     debugLog('popstate: browser navigation detected');
     const currentParams = new URLSearchParams(window.location.search);
     const newFocusParam = currentParams.get('focus');
@@ -792,7 +792,7 @@ function ensureRouteTableInViewport(element) {
       }));
       
       // Create route visualization
-      routeLines = makeRouteLines(routeWaypoints, data.indexOf, data.positions, data.idToName);
+      routeLines = makeRouteLines(routeWaypoints, data.indexOf, data.positions);
       if (routeLines) {
         scene.add(routeLines);
         debugLog('main: route lines added to scene');
