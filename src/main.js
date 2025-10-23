@@ -160,62 +160,85 @@ function computeBounds(positions) {
 
 function makeStarfield(positions, ids, stationSystemSet) {
   debugLog('makeStarfield: creating Points for', positions.length / 3, 'stars');
-  // THREE.Points with additive blending so stars pop at 1080p
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   
-  // Per-vertex color and size - distinguish station systems
-  const colors = new Float32Array(positions.length);
-  const sizes = new Float32Array(positions.length / 3);
+  const group = new THREE.Group();
+  
+  // Separate positions and colors for regular and station systems
+  const regularPositions = [];
+  const regularColors = [];
+  const regularIndices = []; // Map back to original data index
+  const stationPositions = [];
+  const stationColors = [];
+  const stationIndices = []; // Map back to original data index
   
   for (let i = 0; i < ids.length; i++) {
     const systemId = ids[i];
     const hasStation = stationSystemSet.has(systemId);
-    const colorIdx = i * 3;
+    const posIdx = i * 3;
+    
+    const x = positions[posIdx];
+    const y = positions[posIdx + 1];
+    const z = positions[posIdx + 2];
     
     if (hasStation) {
       // Bright red for station systems
-      colors[colorIdx] = 1.0;      // R: 255/255
-      colors[colorIdx + 1] = 0.0;  // G: 0/255
-      colors[colorIdx + 2] = 0.0;  // B: 0/255
-      sizes[i] = 7.5; // 3x larger (2.5 * 3)
+      stationPositions.push(x, y, z);
+      stationColors.push(1.0, 0.0, 0.0); // Pure red
+      stationIndices.push(i); // Store original index
     } else {
       // Orange for regular systems
-      colors[colorIdx] = 1.0;      // R: 255/255
-      colors[colorIdx + 1] = 0.278; // G: 71/255
-      colors[colorIdx + 2] = 0.0;   // B: 0/255
-      sizes[i] = 2.5;
+      regularPositions.push(x, y, z);
+      regularColors.push(1.0, 0.278, 0.0); // Orange
+      regularIndices.push(i); // Store original index
     }
   }
   
-  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geom.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+  // Create regular systems points
+  if (regularPositions.length > 0) {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(regularPositions), 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(regularColors), 3));
+    
+    const mat = new THREE.PointsMaterial({
+      size: 2.5,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    
+    const pts = new THREE.Points(geom, mat);
+    pts.frustumCulled = false;
+    pts.userData.indexMap = regularIndices; // Store mapping
+    group.add(pts);
+  }
   
-  const mat = new THREE.PointsMaterial({
-    sizeAttenuation: true,
-    vertexColors: true,
-    transparent: true,
-    opacity: 1.0,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
-  });
+  // Create station systems points (larger, red)
+  if (stationPositions.length > 0) {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(stationPositions), 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(stationColors), 3));
+    
+    const mat = new THREE.PointsMaterial({
+      size: 7.5, // 3x larger
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    
+    const pts = new THREE.Points(geom, mat);
+    pts.frustumCulled = false;
+    pts.userData.indexMap = stationIndices; // Store mapping
+    group.add(pts);
+  }
   
-  // Enable per-vertex size
-  mat.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader.replace(
-      'void main() {',
-      'attribute float size;\nvoid main() {'
-    );
-    shader.vertexShader = shader.vertexShader.replace(
-      'gl_PointSize = size;',
-      'gl_PointSize = size;'
-    );
-  };
-  
-  const pts = new THREE.Points(geom, mat);
-  pts.frustumCulled = false;
-  debugLog('makeStarfield: created Points object');
-  return pts;
+  debugLog('makeStarfield: created', regularPositions.length / 3, 'regular stars and', stationPositions.length / 3, 'station stars');
+  return group;
 }
 
 function makeJumpLines(jumps, indexOf, positions) {
@@ -307,6 +330,55 @@ function makeJumpLines(jumps, indexOf, positions) {
   scene.add(jumpLines);
   debugLog('main: jumpLines added to scene');
 
+  // --- Focus functionality ---
+  function focusOnSystem(systemIdOrName) {
+    let systemIndex = -1;
+    
+    // Try as ID first (numeric)
+    const asNumber = parseInt(systemIdOrName, 10);
+    if (!isNaN(asNumber)) {
+      systemIndex = data.indexOf.get(asNumber);
+    }
+    
+    // Try as name if not found by ID
+    if (systemIndex === undefined || systemIndex === -1) {
+      // Search through idToName map for matching name (case-insensitive)
+      const searchName = String(systemIdOrName).toLowerCase();
+      for (const [id, name] of Object.entries(data.idToName)) {
+        if (name.toLowerCase() === searchName) {
+          systemIndex = data.indexOf.get(parseInt(id, 10));
+          break;
+        }
+      }
+    }
+    
+    if (systemIndex !== undefined && systemIndex !== -1) {
+      const x = data.positions[systemIndex * 3 + 0];
+      const y = data.positions[systemIndex * 3 + 1];
+      const z = data.positions[systemIndex * 3 + 2];
+      
+      // Calculate camera offset (move camera to a nice viewing distance)
+      const offset = radius * 0.05; // Zoom in close
+      camera.position.set(x + offset, y + offset, z + offset);
+      controls.target.set(x, y, z);
+      controls.update();
+      
+      debugLog('focusOnSystem: focused on', systemIdOrName, 'at index', systemIndex, 'position', [x, y, z]);
+      return true;
+    } else {
+      debugLog('focusOnSystem: system not found', systemIdOrName);
+      return false;
+    }
+  }
+  
+  // Check for focus query parameter on load
+  const urlParams = new URLSearchParams(window.location.search);
+  const focusParam = urlParams.get('focus');
+  if (focusParam) {
+    debugLog('main: focus parameter detected', focusParam);
+    focusOnSystem(focusParam);
+  }
+
   // Debug output: geometry attributes and renderer/camera state
   try {
     const posAttr = starPoints.geometry.getAttribute('position');
@@ -342,20 +414,55 @@ function makeJumpLines(jumps, indexOf, positions) {
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     }
     window.addEventListener('mousemove', onMove, { passive: true });
+    
+    // Click handler to focus and update URL
+    function onClick(e) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(starPoints, true);
+      if (intersects.length > 0) {
+        const intersectedObject = intersects[0].object;
+        const localIndex = intersects[0].index;
+        const originalIndex = intersectedObject.userData.indexMap[localIndex];
+        
+        const sysId = data.ids[originalIndex];
+        const name = data.idToName[String(sysId)] || String(sysId);
+        
+        // Update URL with pushState
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('focus', name);
+        window.history.pushState({}, '', newUrl);
+        
+        // Focus on the clicked system
+        focusOnSystem(name);
+        
+        debugLog('onClick: focused on system', name, 'id', sysId);
+      }
+    }
+    window.addEventListener('click', onClick);
 
     return () => {
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObject(starPoints, false);
+      const intersects = raycaster.intersectObject(starPoints, true); // true = recursive for group
       if (intersects.length > 0) {
-        const i = intersects[0].index;
-        const sysId = data.ids[i];
+        // Get the intersected object and its index
+        const intersectedObject = intersects[0].object;
+        const localIndex = intersects[0].index;
+        
+        // Map back to original data index using userData.indexMap
+        const originalIndex = intersectedObject.userData.indexMap[localIndex];
+        
+        const sysId = data.ids[originalIndex];
         const name = data.idToName[String(sysId)] || String(sysId);
         const hasStation = data.stationSystemSet.has(sysId);
         labelDiv.textContent = hasStation ? `🛰️ ${name}` : name;
         labelObj.position.set(
-          data.positions[i*3+0],
-          data.positions[i*3+1],
-          data.positions[i*3+2]
+          data.positions[originalIndex*3+0],
+          data.positions[originalIndex*3+1],
+          data.positions[originalIndex*3+2]
         );
         labelObj.visible = true;
       } else {
