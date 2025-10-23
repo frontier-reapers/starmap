@@ -214,7 +214,7 @@ function makeJumpLines(jumps, indexOf, positions) {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(finalPos, 3));
   geom.setAttribute('color', new THREE.BufferAttribute(finalCol, 3));
-  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5 });
+  const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.2 });
   const lines = new THREE.LineSegments(geom, mat);
   lines.frustumCulled = false;
   return lines;
@@ -312,13 +312,22 @@ function makeJumpLines(jumps, indexOf, positions) {
         const i = intersects[0].index;
         const sysId = data.ids[i];
         const name = data.idToName[String(sysId)] || String(sysId);
-        labelDiv.textContent = name;
-        labelObj.position.set(
-          data.positions[i*3+0],
-          data.positions[i*3+1],
-          data.positions[i*3+2]
-        );
-        labelObj.visible = true;
+        
+        // Filter out V-### and AD### systems (e.g., V-001, AD123, etc.)
+        const isVSystem = /^V-\d{3}$/i.test(name);
+        const isADSystem = /^AD\d{3}$/i.test(name);
+        
+        if (!isVSystem && !isADSystem) {
+          labelDiv.textContent = name;
+          labelObj.position.set(
+            data.positions[i*3+0],
+            data.positions[i*3+1],
+            data.positions[i*3+2]
+          );
+          labelObj.visible = true;
+        } else {
+          labelObj.visible = false;
+        }
       } else {
         labelObj.visible = false;
       }
