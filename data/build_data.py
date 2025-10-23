@@ -17,10 +17,20 @@ Optional overrides (auto-detected by default):
   --jump-from-col fromSystemId
   --jump-to-col   toSystemId
 """
-import argparse, sqlite3, json, array
+import argparse, sqlite3, json, array, re
 from pathlib import Path
 
 METERS_PER_LY = 9.4607304725808e15  # IAU light-year
+
+def is_filtered_system(name):
+    """Returns True if system should be filtered out (V-### or AD### patterns)"""
+    # Match V-### (e.g., V-001, V-123)
+    if re.match(r'^V-\d{3}$', name, re.IGNORECASE):
+        return True
+    # Match AD### (e.g., AD001, AD123)
+    if re.match(r'^AD\d{3}$', name, re.IGNORECASE):
+        return True
+    return False
 
 def infer_table(cur, needle_keywords):
     cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -94,9 +104,16 @@ def main():
     if z_col: cols.append(z_col)
     cur.execute(f"SELECT {', '.join(cols)} FROM {systems_table}")
     systems = []
+    filtered_count = 0
     for row in cur.fetchall():
         sid = row[id_col]
         nm = row[name_col] if (name_col and name_col in row.keys()) else str(sid)
+        
+        # Filter out V-### and AD### systems
+        if is_filtered_system(nm):
+            filtered_count += 1
+            continue
+        
         xv = float(row[x_col]) if x_col else 0.0
         yv = float(row[y_col]) if y_col else 0.0
         zv = float(row[z_col]) if z_col else 0.0
@@ -122,6 +139,9 @@ def main():
 
     con.close()
 
+    # Build set of valid system IDs for jump filtering
+    valid_system_ids = {sid for sid, _, _, _, _ in systems}
+
     # Build arrays
     ids = array.array('I')
     positions = array.array('f')
@@ -133,9 +153,14 @@ def main():
         xt, yt, zt = transform_xyz(x, y, z)
         positions.extend([xt, yt, zt])
 
+    # Filter jumps to only include connections between valid systems
     flat_jumps = array.array('I')
-    for a,b in jumps:
-        flat_jumps.extend([a,b])
+    filtered_jumps = 0
+    for a, b in jumps:
+        if a in valid_system_ids and b in valid_system_ids:
+            flat_jumps.extend([a, b])
+        else:
+            filtered_jumps += 1
 
     # Write assets
     (out_dir / "systems_positions.bin").write_bytes(positions.tobytes())
@@ -165,7 +190,9 @@ def main():
         "systems_table": systems_table,
         "jumps_table": jumps_table,
         "systems_count": len(systems),
-        "jumps_count": len(jumps),
+        "filtered_systems": filtered_count,
+        "jumps_count": len(flat_jumps) // 2,
+        "filtered_jumps": filtered_jumps,
         "out": str(out_dir.resolve())
     }, indent=2))
 

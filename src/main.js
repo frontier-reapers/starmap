@@ -312,22 +312,13 @@ function makeJumpLines(jumps, indexOf, positions) {
         const i = intersects[0].index;
         const sysId = data.ids[i];
         const name = data.idToName[String(sysId)] || String(sysId);
-        
-        // Filter out V-### and AD### systems (e.g., V-001, AD123, etc.)
-        const isVSystem = /^V-\d{3}$/i.test(name);
-        const isADSystem = /^AD\d{3}$/i.test(name);
-        
-        if (!isVSystem && !isADSystem) {
-          labelDiv.textContent = name;
-          labelObj.position.set(
-            data.positions[i*3+0],
-            data.positions[i*3+1],
-            data.positions[i*3+2]
-          );
-          labelObj.visible = true;
-        } else {
-          labelObj.visible = false;
-        }
+        labelDiv.textContent = name;
+        labelObj.position.set(
+          data.positions[i*3+0],
+          data.positions[i*3+1],
+          data.positions[i*3+2]
+        );
+        labelObj.visible = true;
       } else {
         labelObj.visible = false;
       }
