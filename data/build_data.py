@@ -17,8 +17,14 @@ Optional overrides (auto-detected by default):
   --jump-from-col fromSystemId
   --jump-to-col   toSystemId
 """
-import argparse, sqlite3, json, array, re
+import argparse, json, array, re
 from pathlib import Path
+
+# Try to import sqlite3, fall back to pysqlite3 if the built-in is missing
+try:
+    import sqlite3
+except ImportError:
+    import pysqlite3 as sqlite3
 
 METERS_PER_LY = 9.4607304725808e15  # IAU light-year
 

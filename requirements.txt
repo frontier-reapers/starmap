@@ -1,5 +1,7 @@
 # Python dependencies for starmap data processing
-# Currently using only Python stdlib, but this file is here for future dependencies
+
+# SQLite with precompiled bindings (for environments without _sqlite3 built-in)
+pysqlite3-binary>=0.5.0
 
 # For testing
 pytest>=7.4.0
