@@ -6,8 +6,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Starmap Application', () => {
   test.beforeEach(async ({ page }) => {
-    // Start from the index page
-    await page.goto('http://localhost:3000/public/');
+    // Start from the index page with debug mode enabled
+    await page.goto('http://localhost:3000/public/?debug=true');
   });
 
   test('should load the page with title', async ({ page }) => {

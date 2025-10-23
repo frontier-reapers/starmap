@@ -381,13 +381,18 @@ function makeJumpLines(jumps, indexOf, positions) {
 
   // Debug output: geometry attributes and renderer/camera state
   try {
-    const posAttr = starPoints.geometry.getAttribute('position');
-    const colAttr = starPoints.geometry.getAttribute('color');
-    debugLog('Star geometry attrs:', {
-      positionCount: posAttr ? posAttr.count : 0,
-      positionItemSize: posAttr ? posAttr.itemSize : undefined,
-      colorCount: colAttr ? colAttr.count : 0
-    });
+    // starPoints is now a Group, so we need to check its children
+    if (starPoints.children && starPoints.children.length > 0) {
+      const firstChild = starPoints.children[0];
+      const posAttr = firstChild.geometry.getAttribute('position');
+      const colAttr = firstChild.geometry.getAttribute('color');
+      debugLog('Star geometry attrs:', {
+        groupChildren: starPoints.children.length,
+        positionCount: posAttr ? posAttr.count : 0,
+        positionItemSize: posAttr ? posAttr.itemSize : undefined,
+        colorCount: colAttr ? colAttr.count : 0
+      });
+    }
   } catch (e) {
     debugLog('Failed to inspect star geometry:', e);
   }
