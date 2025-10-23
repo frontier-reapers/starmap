@@ -53,10 +53,18 @@ console.log(`Route URL: ?route=${token}`);
 - **Cyan glassmorphism** design matching project aesthetic
 - Displays:
   - Step number (1, 2, 3...)
-  - Waypoint type (Station, Citadel, etc.)
+  - Waypoint type (Start, Jump, NPC Gate, etc.)
   - System name (or "System {ID}" if name not found)
 - Invalid systems shown in **red** with tooltip
 - Header shows total waypoint count
+- **Interactive features**:
+  - **Click waypoints** to animate camera to that system
+  - **Smooth camera transitions** with ease-in-out cubic easing (1 second duration)
+  - **Drag to reposition** by clicking/dragging the header or background
+  - **Position persists** in localStorage across sessions
+  - **Hover effect** highlights clickable waypoints
+- **OrbitControls disabled during drag** to prevent unwanted camera rotation
+- Table stays within viewport bounds automatically
 
 ### Draggable Interface
 

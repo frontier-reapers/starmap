@@ -345,4 +345,106 @@ test.describe('Starmap Application', () => {
     });
     expect(hasLocalStorage).toBe(true);
   });
+
+  test('should animate camera when clicking waypoint in route table', async ({ page }) => {
+    const validToken = 'H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${validToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    const routeTable = page.locator('#route-table');
+    await expect(routeTable).toBeVisible({ timeout: 5000 });
+    
+    // Get initial camera position
+    const initialPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    // Click the first waypoint row
+    const firstRow = routeTable.locator('tbody tr').first();
+    await firstRow.click();
+    
+    // Wait for animation to complete
+    await page.waitForTimeout(1200);
+    
+    // Camera position should have changed
+    const newPosition = await page.evaluate(() => {
+      return {
+        x: window.camera?.position.x,
+        y: window.camera?.position.y,
+        z: window.camera?.position.z
+      };
+    });
+    
+    // Verify camera moved (at least one coordinate changed)
+    const cameraMoved = 
+      Math.abs(initialPosition.x - newPosition.x) > 0.1 ||
+      Math.abs(initialPosition.y - newPosition.y) > 0.1 ||
+      Math.abs(initialPosition.z - newPosition.z) > 0.1;
+    
+    expect(cameraMoved).toBe(true);
+  });
+
+  test('should not trigger camera rotation while dragging route table', async ({ page }) => {
+    const validToken = 'H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${validToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    const routeTable = page.locator('#route-table');
+    await expect(routeTable).toBeVisible({ timeout: 5000 });
+    
+    // Get initial camera target
+    const initialTarget = await page.evaluate(() => {
+      return {
+        x: window.controls?.target.x,
+        y: window.controls?.target.y,
+        z: window.controls?.target.z
+      };
+    });
+    
+    // Drag the route table
+    const tableHeader = routeTable.locator('h3');
+    const box = await tableHeader.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 100, box.y + 100);
+    await page.mouse.up();
+    
+    // Wait a bit for any potential camera changes
+    await page.waitForTimeout(300);
+    
+    // Camera target should not have changed (OrbitControls were disabled)
+    const newTarget = await page.evaluate(() => {
+      return {
+        x: window.controls?.target.x,
+        y: window.controls?.target.y,
+        z: window.controls?.target.z
+      };
+    });
+    
+    expect(Math.abs(initialTarget.x - newTarget.x)).toBeLessThan(0.01);
+    expect(Math.abs(initialTarget.y - newTarget.y)).toBeLessThan(0.01);
+    expect(Math.abs(initialTarget.z - newTarget.z)).toBeLessThan(0.01);
+  });
+
+  test('waypoint rows should have hover effect', async ({ page }) => {
+    const validToken = 'H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA';
+    await page.goto(`http://localhost:3000/public/?debug=true&route=${validToken}`);
+    
+    await page.waitForTimeout(3000);
+    
+    const routeTable = page.locator('#route-table');
+    await expect(routeTable).toBeVisible({ timeout: 5000 });
+    
+    const firstRow = routeTable.locator('tbody tr').first();
+    
+    // Row should be clickable (have cursor pointer)
+    const cursor = await firstRow.evaluate(el => window.getComputedStyle(el).cursor);
+    expect(cursor).toBe('pointer');
+  });
 });

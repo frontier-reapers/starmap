@@ -340,7 +340,7 @@ function makeRouteLines(waypoints, indexOf, positions, idToName) {
 
 // --- Route table UI functions ---
 
-function createRouteTable(waypoints) {
+function createRouteTable(waypoints, focusCallback) {
   const table = document.createElement('div');
   table.id = 'route-table';
   
@@ -379,6 +379,25 @@ function createRouteTable(waypoints) {
   waypoints.forEach((wp, idx) => {
     const row = document.createElement('tr');
     
+    // Make row clickable if waypoint is valid
+    if (wp.valid) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', () => {
+        debugLog('Route waypoint clicked:', wp.name, wp.Id);
+        if (focusCallback) {
+          focusCallback(wp.Id);
+        }
+      });
+      
+      // Add hover effect
+      row.addEventListener('mouseenter', () => {
+        row.style.backgroundColor = 'rgba(0, 255, 255, 0.2)';
+      });
+      row.addEventListener('mouseleave', () => {
+        row.style.backgroundColor = '';
+      });
+    }
+    
     const stepCell = document.createElement('td');
     stepCell.className = 'step-number';
     stepCell.textContent = (idx + 1).toString();
@@ -402,13 +421,12 @@ function createRouteTable(waypoints) {
   tableEl.appendChild(tbody);
   table.appendChild(tableEl);
   
-  // Make draggable
-  makeDraggable(table);
+  // Note: makeDraggable will be called after controls are available
   
   return table;
 }
 
-function makeDraggable(element) {
+function makeDraggable(element, orbitControls) {
   let isDragging = false;
   let startX, startY, startRight, startTop;
   
@@ -425,7 +443,13 @@ function makeDraggable(element) {
     startRight = window.innerWidth - rect.right;
     startTop = rect.top;
     
+    // Disable OrbitControls while dragging to prevent camera rotation
+    if (orbitControls) {
+      orbitControls.enabled = false;
+    }
+    
     e.preventDefault();
+    e.stopPropagation();
   });
   
   window.addEventListener('mousemove', (e) => {
@@ -439,11 +463,19 @@ function makeDraggable(element) {
     
     element.style.top = newTop + 'px';
     element.style.right = newRight + 'px';
+    
+    e.preventDefault();
+    e.stopPropagation();
   });
   
   window.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
+      
+      // Re-enable OrbitControls
+      if (orbitControls) {
+        orbitControls.enabled = true;
+      }
       
       // Ensure element is in viewport
       ensureRouteTableInViewport(element);
@@ -506,6 +538,13 @@ function ensureRouteTableInViewport(element) {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   debugLog('main: camera and controls created');
+  
+  // Expose camera and controls for testing (debug mode only)
+  if (DEBUG_ENABLED) {
+    window.camera = camera;
+    window.controls = controls;
+    debugLog('main: exposed camera and controls to window for testing');
+  }
 
   const data = await loadData();
   debugLog('main: data loaded');
@@ -529,7 +568,55 @@ function ensureRouteTableInViewport(element) {
   debugLog('main: jumpLines added to scene');
 
   // --- Focus functionality ---
-  function focusOnSystem(systemIdOrName) {
+  
+  // Camera animation state
+  let cameraAnimation = null;
+  
+  function animateCameraTo(targetPos, targetLookAt, duration = 1000) {
+    // Cancel any existing animation
+    if (cameraAnimation) {
+      cameraAnimation.cancelled = true;
+    }
+    
+    const startPos = camera.position.clone();
+    const startLookAt = controls.target.clone();
+    const endPos = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
+    const endLookAt = new THREE.Vector3(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+    const startTime = performance.now();
+    
+    // Easing function: ease in-out cubic
+    const easeInOutCubic = (t) => {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
+    
+    const animation = { cancelled: false };
+    cameraAnimation = animation;
+    
+    const tick = () => {
+      if (animation.cancelled) return;
+      
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = easeInOutCubic(progress);
+      
+      // Interpolate position and look-at
+      camera.position.lerpVectors(startPos, endPos, easedProgress);
+      controls.target.lerpVectors(startLookAt, endLookAt, easedProgress);
+      controls.update();
+      
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        cameraAnimation = null;
+      }
+    };
+    
+    tick();
+  }
+  
+  function focusOnSystem(systemIdOrName, animate = true) {
     let systemIndex = -1;
     
     // Try as ID first (numeric)
@@ -557,9 +644,16 @@ function ensureRouteTableInViewport(element) {
       
       // Calculate camera offset (move camera to a nice viewing distance)
       const offset = radius * 0.05; // Zoom in close
-      camera.position.set(x + offset, y + offset, z + offset);
-      controls.target.set(x, y, z);
-      controls.update();
+      const targetPos = { x: x + offset, y: y + offset, z: z + offset };
+      const targetLookAt = { x, y, z };
+      
+      if (animate) {
+        animateCameraTo(targetPos, targetLookAt, 1000);
+      } else {
+        camera.position.set(targetPos.x, targetPos.y, targetPos.z);
+        controls.target.set(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+        controls.update();
+      }
       
       debugLog('focusOnSystem: focused on', systemIdOrName, 'at index', systemIndex, 'position', [x, y, z]);
       return true;
@@ -574,7 +668,7 @@ function ensureRouteTableInViewport(element) {
   const focusParam = urlParams.get('focus');
   if (focusParam) {
     debugLog('main: focus parameter detected', focusParam);
-    focusOnSystem(focusParam);
+    focusOnSystem(focusParam, false); // Don't animate on initial load
   }
   
   // --- Route functionality ---
@@ -707,8 +801,9 @@ function ensureRouteTableInViewport(element) {
   
   // --- Route table UI ---
   if (routeWaypoints && routeWaypoints.length > 0) {
-    const routeTable = createRouteTable(routeWaypoints);
+    const routeTable = createRouteTable(routeWaypoints, focusOnSystem);
     container.appendChild(routeTable);
+    makeDraggable(routeTable, controls);
     debugLog('main: route table UI added');
   }
 
