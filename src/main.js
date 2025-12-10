@@ -859,8 +859,30 @@ function ensureRouteTableInViewport(element) {
     }
     window.addEventListener('mousemove', onMove, { passive: true });
     
+    // Track drag state to prevent selection during camera rotation
+    let mouseDownPos = null;
+    const DRAG_THRESHOLD = 5; // pixels - movement below this is considered a click
+    
+    window.addEventListener('mousedown', (e) => {
+      mouseDownPos = { x: e.clientX, y: e.clientY };
+    });
+    
     // Click handler to focus and update URL
     function onClick(e) {
+      // Check if this was a drag operation
+      if (mouseDownPos) {
+        const dx = Math.abs(e.clientX - mouseDownPos.x);
+        const dy = Math.abs(e.clientY - mouseDownPos.y);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // If mouse moved significantly, this was a drag - don't select
+        if (distance > DRAG_THRESHOLD) {
+          mouseDownPos = null;
+          return;
+        }
+      }
+      mouseDownPos = null;
+      
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;

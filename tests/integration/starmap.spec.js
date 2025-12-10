@@ -208,6 +208,40 @@ test.describe('Starmap Application', () => {
     }
   });
 
+  test('should not select system when dragging to rotate camera', async ({ page }) => {
+    // Wait for canvas to be ready
+    const canvas = page.locator('canvas').first();
+    await expect(canvas).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+    
+    // Get initial URL (should have no focus parameter)
+    const initialUrl = page.url();
+    
+    // Perform a drag operation on the canvas
+    const box = await canvas.boundingBox();
+    if (box) {
+      const startX = box.x + box.width / 2;
+      const startY = box.y + box.height / 2;
+      
+      // Simulate camera drag: mousedown -> move -> mouseup
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + 100, startY + 50, { steps: 10 }); // Drag 100px right, 50px down
+      await page.mouse.up();
+      
+      await page.waitForTimeout(500);
+      
+      // URL should NOT have changed to include a focus parameter
+      const newUrl = page.url();
+      if (!initialUrl.includes('focus=')) {
+        // If we didn't start with a focus, we shouldn't have one now
+        expect(newUrl).not.toContain('focus=');
+      }
+      // The main point is that the URL shouldn't have changed from a drag
+      // (unless we already had a focus parameter from a previous test)
+    }
+  });
+
   test('should have dual point cloud structure', async ({ page }) => {
     const debugPanel = page.locator('#debug-log');
     
