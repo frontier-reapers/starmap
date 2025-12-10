@@ -861,7 +861,7 @@ function ensureRouteTableInViewport(element) {
     
     // Track drag state to prevent selection during camera rotation
     let mouseDownPos = null;
-    const DRAG_THRESHOLD = 5; // pixels - movement below this is considered a click
+    const DRAG_THRESHOLD = 15; // pixels - movement below this is considered a click
     
     window.addEventListener('mousedown', (e) => {
       mouseDownPos = { x: e.clientX, y: e.clientY };
