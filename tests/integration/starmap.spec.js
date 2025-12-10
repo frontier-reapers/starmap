@@ -11,7 +11,7 @@ test.describe('Starmap Application', () => {
   });
 
   test('should load the page with title', async ({ page }) => {
-    await expect(page).toHaveTitle(/Starmap/);
+    await expect(page).toHaveTitle(/Reapers Frontier Map/);
   });
 
   test('should have the main app container', async ({ page }) => {

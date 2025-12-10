@@ -1,4 +1,4 @@
-# Starmap (Three.js)
+# Reapers Frontier Map
 
 A 3D interactive star map visualization using three.js, rendering EVE Online solar system data with orbital controls and hover labels.
 
