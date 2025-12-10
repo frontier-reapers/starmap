@@ -1,8 +1,8 @@
 {
   "counts": {
     "systems": 24026,
-    "jumps": 7408,
-    "systems_with_stations": 57
+    "jumps": 6876,
+    "systems_with_stations": 98
   },
   "schema": {
     "systems_positions.bin": {
