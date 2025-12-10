@@ -451,7 +451,13 @@ test.describe('Starmap Application', () => {
   test('should handle browser back/forward navigation', async ({ page }) => {
     await page.goto(`http://localhost:3000/public/?debug=true`);
     
-    await page.waitForTimeout(3000);
+    // Wait for initial load and animation to start
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('animate: frame');
+    }, { timeout: 10000 });
+    
+    await page.waitForTimeout(500);
     
     // Get initial camera position
     const initialPosition = await page.evaluate(() => {
@@ -462,9 +468,16 @@ test.describe('Starmap Application', () => {
       };
     });
     
-    // Navigate to a system via URL
-    await page.goto(`http://localhost:3000/public/?debug=true&focus=Strym`);
-    await page.waitForTimeout(1500);
+    // Navigate to a system via URL (O3H-1FN is in the dataset)
+    await page.goto(`http://localhost:3000/public/?debug=true&focus=O3H-1FN`);
+    
+    // Wait for focus to be applied
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('focusOnSystem: focused on');
+    }, { timeout: 10000 });
+    
+    await page.waitForTimeout(500);
     
     // Camera should have moved
     const focusedPosition = await page.evaluate(() => {
@@ -535,19 +548,32 @@ test.describe('Starmap Application', () => {
   });
 
   test('should show persistent label for focused system', async ({ page }) => {
-    await page.goto(`http://localhost:3000/public/?debug=true&focus=Strym`);
+    await page.goto(`http://localhost:3000/public/?debug=true&focus=O3H-1FN`);
     
-    await page.waitForTimeout(3000);
+    // Wait for focus to be applied
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('updatePersistentLabel: focus label created');
+    }, { timeout: 10000 });
+    
+    // Wait for animation to start (which renders the label to DOM)
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('animate: frame');
+    }, { timeout: 10000 });
+    
+    // Give renderer a moment to update DOM
+    await page.waitForTimeout(500);
     
     // Label should be visible in the DOM (CSS2D labels are actual DOM elements)
     const labels = page.locator('.label');
     const labelCount = await labels.count();
     expect(labelCount).toBeGreaterThan(0);
     
-    // At least one label should contain "Strym"
+    // At least one label should contain "O3H-1FN"
     const labelTexts = await labels.allTextContents();
-    const hasStrymLabel = labelTexts.some(text => text.includes('Strym'));
-    expect(hasStrymLabel).toBe(true);
+    const hasSystemLabel = labelTexts.some(text => text.includes('O3H-1FN'));
+    expect(hasSystemLabel).toBe(true);
   });
 
   test('should show blue labels for route start and end', async ({ page }) => {
