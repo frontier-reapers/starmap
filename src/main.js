@@ -113,6 +113,32 @@ function setDataReleaseBadge(text) {
   }
 }
 
+function makeGlowSprite(color = 0xffaa00, size = 128) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const grd = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  grd.addColorStop(0.0, 'rgba(255, 200, 120, 0.7)');
+  grd.addColorStop(0.35, 'rgba(255, 170, 60, 0.45)');
+  grd.addColorStop(1.0, 'rgba(255, 140, 30, 0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    opacity: 0.9
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.visible = false;
+  sprite.frustumCulled = false;
+  return sprite;
+}
+
 // --- Tiny helper to load binary files into typed arrays ----------------------
 async function fetchArrayBuffer(path) {
   debugLog('fetchArrayBuffer:', path);
@@ -202,6 +228,112 @@ function computeBounds(positions) {
   const radius = Math.hypot(size[0], size[1], size[2]) * 0.5;
   debugLog('computeBounds: result', {center, radius, min: b.min, max: b.max});
   return {bounds:b, center, radius};
+}
+
+function buildSearchIndex(idToName) {
+  const entries = [];
+  for (const [idStr, name] of Object.entries(idToName)) {
+    const id = parseInt(idStr, 10);
+    entries.push({ id, idStr, name, nameLower: name.toLowerCase() });
+  }
+  entries.sort((a, b) => a.nameLower.localeCompare(b.nameLower));
+  return entries;
+}
+
+function fuzzyMatch(query, entries, limit = 10) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  const isNumeric = /^\d+$/.test(q);
+  const scored = [];
+  for (const item of entries) {
+    let score = 0;
+    if (isNumeric) {
+      if (item.idStr === q) score += 5;
+      else if (item.idStr.startsWith(q)) score += 3;
+    }
+    if (item.nameLower === q) score += 5;
+    else if (item.nameLower.startsWith(q)) score += 3;
+    else if (item.nameLower.includes(q)) score += 1;
+    if (score > 0) scored.push({ score, item });
+  }
+  scored.sort((a, b) => b.score - a.score || a.item.nameLower.localeCompare(b.item.nameLower));
+  return scored.slice(0, limit).map(s => s.item);
+}
+
+function setupSearch(data, focusOnSystem) {
+  const btn = document.getElementById('tool-search');
+  const panel = document.getElementById('search-panel');
+  const input = document.getElementById('search-input');
+  const results = document.getElementById('search-results');
+  if (!btn || !panel || !input || !results) return;
+
+  const index = buildSearchIndex(data.idToName);
+
+  function stop(ev){ ev.stopPropagation(); }
+  [btn, panel, input, results].forEach(el => el && el.addEventListener('click', stop));
+  input.addEventListener('keydown', stop);
+
+  function render(list) {
+    results.innerHTML = '';
+    list.forEach(entry => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="name">${entry.name}</span><span class="sid">${entry.idStr}</span>`;
+      li.addEventListener('click', (e) => {
+        e.stopPropagation();
+        focusOnSystem(entry.name);
+        input.value = entry.name;
+        closePanel();
+      });
+      results.appendChild(li);
+    });
+  }
+
+  function openPanel() {
+    panel.classList.remove('search-collapsed');
+    setTimeout(() => input.focus({ preventScroll: true }), 0);
+    render(fuzzyMatch(input.value.trim(), index, 8));
+  }
+
+  function closePanel() {
+    panel.classList.add('search-collapsed');
+  }
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel.classList.contains('search-collapsed')) {
+      openPanel();
+    } else {
+      closePanel();
+    }
+  });
+
+  input.addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    render(fuzzyMatch(q, index, 8));
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closePanel();
+      return;
+    }
+    if (e.key === 'Enter') {
+      const q = e.target.value.trim();
+      const best = fuzzyMatch(q, index, 1)[0];
+      if (best) {
+        focusOnSystem(best.name);
+        closePanel();
+      }
+    }
+  });
+
+  // Ctrl+F keybinding to open search
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      openPanel();
+    }
+  });
 }
 
 function makeStarfield(positions, ids, stationSystemSet) {
@@ -473,13 +605,18 @@ function createRouteTable(waypoints, focusCallback) {
 
 function makeDraggable(element, orbitControls) {
   let isDragging = false;
+  let hasDragged = false;
   let startX, startY, startRight, startTop;
+  
+  // Export state for hover detection
+  element.isDraggingRoutePanel = () => isDragging;
   
   element.addEventListener('mousedown', (e) => {
     // Only start drag if clicking on the element itself or header, not table rows
     if (e.target.tagName === 'TD' || e.target.tagName === 'TR') return;
     
     isDragging = true;
+    hasDragged = false;
     startX = e.clientX;
     startY = e.clientY;
     
@@ -503,6 +640,11 @@ function makeDraggable(element, orbitControls) {
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     
+    // Mark as dragged if moved significantly
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasDragged = true;
+    }
+    
     const newTop = startTop + dy;
     const newRight = startRight - dx;
     
@@ -513,9 +655,15 @@ function makeDraggable(element, orbitControls) {
     e.stopPropagation();
   });
   
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', (e) => {
     if (isDragging) {
       isDragging = false;
+      
+      // Stop propagation if we actually dragged
+      if (hasDragged) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
       
       // Re-enable OrbitControls
       if (orbitControls) {
@@ -533,7 +681,7 @@ function makeDraggable(element, orbitControls) {
       };
       localStorage.setItem('routeTablePosition', JSON.stringify(position));
     }
-  });
+  }, true); // Use capture phase to stop propagation before onClick
 }
 
 function ensureRouteTableInViewport(element) {
@@ -600,6 +748,8 @@ function ensureRouteTableInViewport(element) {
   debugLog('main: starPoints added to scene');
 
   const {center, radius} = computeBounds(data.positions);
+  const hoverSprite = makeGlowSprite();
+  scene.add(hoverSprite);
   camera.position.set(center[0] + radius*0.6, center[1] + radius*0.3, center[2] + radius*0.6);
   controls.target.set(center[0], center[1], center[2]);
   controls.update();
@@ -819,6 +969,9 @@ function ensureRouteTableInViewport(element) {
       updatePersistentLabel('focus', null);
     }
   });
+
+  // --- Search panel setup ---
+  setupSearch(data, focusOnSystem);
   
   // --- Route functionality ---
   let routeWaypoints = null;
@@ -899,6 +1052,15 @@ function ensureRouteTableInViewport(element) {
   labelObj.visible = false;
   scene.add(labelObj);
 
+  // --- Route table UI ---
+  let routeTable = null;
+  if (routeWaypoints && routeWaypoints.length > 0) {
+    routeTable = createRouteTable(routeWaypoints, focusOnSystem);
+    container.appendChild(routeTable);
+    makeDraggable(routeTable, controls);
+    debugLog('main: route table UI added');
+  }
+
   function updateHover() {
     const mouse = new THREE.Vector2();
     function onMove(e){
@@ -960,6 +1122,11 @@ function ensureRouteTableInViewport(element) {
     window.addEventListener('click', onClick);
 
     return () => {
+      // Skip hover detection if route panel is being dragged
+      if (routeTable && routeTable.isDraggingRoutePanel && routeTable.isDraggingRoutePanel()) {
+        return;
+      }
+      
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObject(starPoints, true); // true = recursive for group
       if (intersects.length > 0) {
@@ -974,27 +1141,29 @@ function ensureRouteTableInViewport(element) {
         const name = data.idToName[String(sysId)] || String(sysId);
         const hasStation = data.stationSystemSet.has(sysId);
         labelDiv.textContent = hasStation ? `🛰️ ${name}` : name;
-        labelObj.position.set(
-          data.positions[originalIndex*3+0],
-          data.positions[originalIndex*3+1],
-          data.positions[originalIndex*3+2]
-        );
+        
+        const x = data.positions[originalIndex*3+0];
+        const y = data.positions[originalIndex*3+1];
+        const z = data.positions[originalIndex*3+2];
+        
+        labelObj.position.set(x, y + radius * 0.003, z);
         labelObj.visible = true;
+        labelDiv.classList.add('hovered');
+
+        // Position and show hover sprite on the actual system
+        const spriteScale = Math.max(radius * 0.01, 30);
+        hoverSprite.position.set(x, y, z);
+        hoverSprite.scale.set(spriteScale, spriteScale, spriteScale);
+        hoverSprite.visible = true;
       } else {
         labelObj.visible = false;
+        labelDiv.classList.remove('hovered');
+        hoverSprite.visible = false;
       }
     };
-  }
+  };
   const hoverStep = updateHover();
   
-  // --- Route table UI ---
-  if (routeWaypoints && routeWaypoints.length > 0) {
-    const routeTable = createRouteTable(routeWaypoints, focusOnSystem);
-    container.appendChild(routeTable);
-    makeDraggable(routeTable, controls);
-    debugLog('main: route table UI added');
-  }
-
   function onResize(){
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
