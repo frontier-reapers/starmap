@@ -77,14 +77,33 @@ let cacheVersion = '';
 async function loadBuildInfo() {
   try {
     const response = await fetch('./build-info.json', { cache: 'no-store' });
-    if (response.ok) {
-      const buildInfo = await response.json();
-      cacheVersion = buildInfo.commit;
-      debugLog('Build info loaded', buildInfo);
-      console.log('Cache buster version:', cacheVersion);
-    } else {
+    if (!response.ok) {
       debugLog('Could not load build-info.json: HTTP', response.status);
+      return;
     }
+
+    const contentType = (response.headers && response.headers.get('content-type')) || '';
+    const bodyText = await response.text();
+
+    if (!contentType.includes('application/json')) {
+      debugLog('build-info.json not JSON; skipping cache bust', {
+        contentType,
+        preview: bodyText.slice(0, 120)
+      });
+      return;
+    }
+
+    let buildInfo;
+    try {
+      buildInfo = JSON.parse(bodyText);
+    } catch (parseErr) {
+      debugLog('Could not parse build-info.json; skipping cache bust', parseErr);
+      return;
+    }
+
+    cacheVersion = buildInfo.commit;
+    debugLog('Build info loaded', buildInfo);
+    console.log('Cache buster version:', cacheVersion);
   } catch (e) {
     debugLog('Could not load build-info.json:', e);
     console.error('Build info fetch error:', e);

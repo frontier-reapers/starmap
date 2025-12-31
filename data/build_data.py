@@ -18,7 +18,7 @@ Optional overrides (auto-detected by default):
   --jump-to-col   toSystemId
     --release e6c4
 """
-import argparse, json, array, re
+import argparse, json, array, re, sys
 from pathlib import Path
 
 # Try to import sqlite3, fall back to pysqlite3 if the built-in is missing
@@ -66,6 +66,40 @@ def transform_xyz(xm, ym, zm):
     yly = float(ym) / METERS_PER_LY
     zly = float(zm) / METERS_PER_LY
     return (xly, zly, -yly)
+
+
+def validate_assets(ids, positions, jumps, station_ids, black_hole_ids, valid_system_ids):
+    """Return a list of validation error strings for built assets."""
+    issues = []
+
+    # positions are 3-component vectors; ensure count matches ids
+    pos_len = len(positions)
+    if pos_len % 3 != 0:
+        issues.append(f"positions length {pos_len} is not divisible by 3")
+    pos_count = pos_len // 3
+    id_count = len(ids)
+    if pos_count != id_count:
+        issues.append(f"positions count ({pos_count}) does not match ids count ({id_count})")
+
+    # Jumps must only reference known systems
+    invalid_jumps = [(a, b) for (a, b) in jumps if a not in valid_system_ids or b not in valid_system_ids]
+    if invalid_jumps:
+        sample = invalid_jumps[:5]
+        issues.append(f"{len(invalid_jumps)} jumps reference missing systems (examples: {sample})")
+
+    # Station systems must exist
+    invalid_station_ids = [sid for sid in station_ids if sid not in valid_system_ids]
+    if invalid_station_ids:
+        sample = invalid_station_ids[:5]
+        issues.append(f"{len(invalid_station_ids)} station system IDs are missing from systems (examples: {sample})")
+
+    # Black hole systems must exist
+    invalid_black_hole_ids = [sid for sid in black_hole_ids if sid not in valid_system_ids]
+    if invalid_black_hole_ids:
+        sample = invalid_black_hole_ids[:5]
+        issues.append(f"{len(invalid_black_hole_ids)} black hole IDs are missing from systems (examples: {sample})")
+
+    return issues
 
 def main():
     ap = argparse.ArgumentParser()
@@ -176,14 +210,23 @@ def main():
         if sid in station_systems:
             station_ids.append(sid)
 
-    # Filter jumps to only include connections between valid systems
+    # Black hole systems (hardcoded IDs)
+    black_hole_ids = array.array('I', [30000001, 30000002, 30000003])
+
+    # Validate built data before writing to disk
+    issues = validate_assets(ids, positions, jumps, station_ids, black_hole_ids, valid_system_ids)
+    if issues:
+        print("Data validation failed:", file=sys.stderr)
+        for msg in issues:
+            print(f"- {msg}", file=sys.stderr)
+        raise SystemExit(1)
+
+    # Flatten jumps (validated) to binary array
     flat_jumps = array.array('I')
-    filtered_jumps = 0
     for a, b in jumps:
-        if a in valid_system_ids and b in valid_system_ids:
-            flat_jumps.extend([a, b])
-        else:
-            filtered_jumps += 1
+        flat_jumps.extend([a, b])
+
+    filtered_jumps = 0  # validation enforces all jumps are valid
 
     # Write assets
     (out_dir / "systems_positions.bin").write_bytes(positions.tobytes())
@@ -191,9 +234,6 @@ def main():
     (out_dir / "systems_names.json").write_text(json.dumps(names, ensure_ascii=False))
     (out_dir / "jumps.bin").write_bytes(flat_jumps.tobytes())
     (out_dir / "systems_with_stations.bin").write_bytes(station_ids.tobytes())
-    
-    # Black hole systems (hardcoded IDs)
-    black_hole_ids = array.array('I', [30000001, 30000002, 30000003])
     (out_dir / "systems_black_holes.bin").write_bytes(black_hole_ids.tobytes())
 
     manifest = {
