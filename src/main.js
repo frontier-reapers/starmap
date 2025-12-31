@@ -81,15 +81,23 @@ async function loadBuildInfo() {
       const buildInfo = await response.json();
       cacheVersion = buildInfo.commit;
       debugLog('Build info loaded', buildInfo);
+      console.log('Cache buster version:', cacheVersion);
+    } else {
+      debugLog('Could not load build-info.json: HTTP', response.status);
     }
   } catch (e) {
     debugLog('Could not load build-info.json:', e);
+    console.error('Build info fetch error:', e);
   }
 }
 
 // Helper to add cache-bust param to URLs
 function cacheBustUrl(path) {
-  return cacheVersion ? path + '?v=' + cacheVersion : path;
+  const result = cacheVersion ? path + '?v=' + cacheVersion : path;
+  if (cacheVersion) {
+    console.log('Cache busting', path, '->', result);
+  }
+  return result;
 }
 
 function extractDataRelease(manifest) {
