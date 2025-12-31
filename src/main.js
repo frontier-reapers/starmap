@@ -70,6 +70,49 @@ debugLog('module loaded', { href: typeof location !== 'undefined' ? location.hre
 const DATA_BASE = './data/';
 const VERSION_KEY = 'starmap_data_version_v1'; // bump if data format changes
 
+function extractDataRelease(manifest) {
+  if (!manifest || typeof manifest !== 'object') return null;
+  const meta = manifest.meta || manifest.metadata;
+  const candidates = [
+    manifest.release,
+    manifest.version,
+    manifest.data_release,
+    manifest.dataset,
+    manifest.dataset_version,
+    manifest.tag,
+    manifest.rev,
+    manifest.revision,
+    manifest.build,
+    meta && meta.release,
+    meta && meta.version,
+    meta && meta.tag,
+    meta && meta.rev,
+    meta && meta.revision
+  ];
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function setDataReleaseBadge(text) {
+  try {
+    let badge = document.getElementById('data-release');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'data-release';
+      badge.setAttribute('aria-live', 'polite');
+      badge.setAttribute('role', 'status');
+      document.body.appendChild(badge);
+    }
+    badge.textContent = text;
+  } catch (e) {
+    debugLog('setDataReleaseBadge error', e);
+  }
+}
+
 // --- Tiny helper to load binary files into typed arrays ----------------------
 async function fetchArrayBuffer(path) {
   debugLog('fetchArrayBuffer:', path);
@@ -99,6 +142,8 @@ async function loadData() {
     fetchArrayBuffer(DATA_BASE + 'jumps.bin'),
     fetchArrayBuffer(DATA_BASE + 'systems_with_stations.bin')
   ]);
+  const dataRelease = extractDataRelease(manifest);
+  debugLog('loadData: data release', dataRelease);
 
   // The binary data is in native (little-endian) format from Python array.tobytes()
   // We can use TypedArray constructors directly (they default to little-endian)
@@ -139,7 +184,7 @@ async function loadData() {
   for (let i=0;i<ids.length;i++) indexOf.set(ids[i], i);
 
   debugLog('loadData: complete');
-  return {manifest, positions, ids, idToName, jumps, indexOf, stationSystemSet};
+  return {manifest, positions, ids, idToName, jumps, indexOf, stationSystemSet, dataRelease};
 }
 
 function computeBounds(positions) {
@@ -548,6 +593,8 @@ function ensureRouteTableInViewport(element) {
 
   const data = await loadData();
   debugLog('main: data loaded');
+  const releaseLabel = data.dataRelease || 'unknown';
+  setDataReleaseBadge(`data: ${releaseLabel}`);
   const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
@@ -777,11 +824,13 @@ function ensureRouteTableInViewport(element) {
   let routeWaypoints = null;
   let routeLines = null;
   const routeParam = urlParams.get('route');
+  const typeWidthParam = urlParams.get('tw');
+  const typeWidth = typeWidthParam ? parseInt(typeWidthParam, 10) : 2; // Default to 2
   
   if (routeParam) {
     try {
-      debugLog('main: route parameter detected, decoding...');
-      routeWaypoints = await decodeRouteToken(routeParam);
+      debugLog('main: route parameter detected, decoding...', { typeWidth });
+      routeWaypoints = await decodeRouteToken(routeParam, typeWidth);
       debugLog('main: decoded', routeWaypoints.length, 'waypoints');
       
       // Validate and enrich waypoints with system names

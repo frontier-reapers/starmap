@@ -10,13 +10,14 @@ const BASE_ID = 30_000_000;
 /**
  * Decode a base64url-gzipped route token
  * @param {string} token - Base64url encoded gzipped route data
+ * @param {number} [typeWidth=2] - Bitwidth for Type field (default 2, allows 3)
  * @returns {Promise<Array<{Id: number, Type: number}>>} Array of waypoints
  */
-export async function decodeRouteToken(token) {
+export async function decodeRouteToken(token, typeWidth = 2) {
   try {
     const gz = fromBase64Url(token);
     const raw = await gunzip(gz);
-    return decodeRawBitPacked(raw);
+    return decodeRawBitPacked(raw, typeWidth);
   } catch (err) {
     // Provide more specific error messages
     if (err.message && err.message.includes('invalid code lengths')) {
@@ -33,7 +34,7 @@ export async function decodeRouteToken(token) {
 
 // ======== Bit-tight decoding ========
 
-function decodeRawBitPacked(buf) {
+function decodeRawBitPacked(buf, typeWidth = 2) {
   if (buf.length < 4) throw new Error('Route data too short');
   
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -41,6 +42,7 @@ function decodeRawBitPacked(buf) {
   if (buf[0] !== 1) throw new Error('Unsupported route version');
   const k = buf[1];
   if (k <= 0 || k > 30) throw new Error('Invalid route bit width');
+  if (typeWidth <= 0 || typeWidth > 8) throw new Error('Invalid type bit width');
 
   const count = view.getUint16(2, false); // big-endian
   const br = new BitReader(buf.subarray(4));
@@ -48,7 +50,7 @@ function decodeRawBitPacked(buf) {
   const items = [];
   for (let i = 0; i < count; i++) {
     const off = br.readBits(k) >>> 0;
-    const type = br.readBits(2) >>> 0;
+    const type = br.readBits(typeWidth) >>> 0;
     items.push({ Id: BASE_ID + off, Type: type });
   }
   return items;

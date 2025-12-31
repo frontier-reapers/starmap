@@ -16,6 +16,7 @@ Optional overrides (auto-detected by default):
   --jumps-table Jumps
   --jump-from-col fromSystemId
   --jump-to-col   toSystemId
+    --release e6c4
 """
 import argparse, json, array, re
 from pathlib import Path
@@ -80,6 +81,7 @@ def main():
     ap.add_argument("--jumps-table")
     ap.add_argument("--jump-from-col")
     ap.add_argument("--jump-to-col")
+    ap.add_argument("--release", help="Data release label (e.g., e6c4)")
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -208,6 +210,8 @@ def main():
             "transform": "Rx(-90deg), i.e., (x,y,z)->(x,z,-y)"
         }
     }
+    if args.release:
+        manifest["release"] = args.release
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
     print(json.dumps({
@@ -218,6 +222,7 @@ def main():
         "systems_with_stations": len(station_ids),
         "jumps_count": len(flat_jumps) // 2,
         "filtered_jumps": filtered_jumps,
+        "release": args.release,
         "out": str(out_dir.resolve())
     }, indent=2))
 
