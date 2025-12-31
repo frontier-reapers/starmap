@@ -1,9 +1,9 @@
 {
-  "release": "e6c4",
   "counts": {
     "systems": 24026,
     "jumps": 6876,
-    "systems_with_stations": 98
+    "systems_with_stations": 98,
+    "systems_black_holes": 3
   },
   "schema": {
     "systems_positions.bin": {
@@ -24,6 +24,10 @@
     "systems_with_stations.bin": {
       "type": "Uint32Array",
       "meaning": "IDs of systems with NPC stations"
+    },
+    "systems_black_holes.bin": {
+      "type": "Uint32Array",
+      "meaning": "IDs of black hole systems"
     }
   },
   "coord_system": {

@@ -191,13 +191,14 @@ async function loadData() {
   // developing locally without the binary blobs), fall back to generated demo
   // data so the scene still renders.
   debugLog('loadData: fetching manifest and binary blobs...');
-  const [manifest, posBuf, idsBuf, namesRes, jumpsBuf, stationsBuf] = await Promise.all([
+  const [manifest, posBuf, idsBuf, namesRes, jumpsBuf, stationsBuf, blackHolesBuf] = await Promise.all([
     fetch(cacheBustUrl(DATA_BASE + 'manifest.json')).then(r => r.json()),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_positions.bin')),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_ids.bin')),
     fetch(cacheBustUrl(DATA_BASE + 'systems_names.json')).then(r => r.json()),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'jumps.bin')),
-    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_with_stations.bin'))
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_with_stations.bin')),
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_black_holes.bin'))
   ]);
   const dataRelease = extractDataRelease(manifest);
   debugLog('loadData: data release', dataRelease);
@@ -209,11 +210,16 @@ async function loadData() {
   const ids = new Uint32Array(idsBuf);
   const jumps = new Uint32Array(jumpsBuf);
   const stationSystemIds = new Uint32Array(stationsBuf);
+  const blackHoleSystemIds = new Uint32Array(blackHolesBuf);
   const idToName = namesRes;
   
   // Build set of station system IDs for quick lookup
   const stationSystemSet = new Set(stationSystemIds);
   debugLog('loadData: loaded station systems', { stationCount: stationSystemIds.length });
+  
+  // Build set of black hole system IDs for quick lookup
+  const blackHoleSystemSet = new Set(blackHoleSystemIds);
+  debugLog('loadData: loaded black hole systems', { blackHoleCount: blackHoleSystemIds.length });
 
   // Apply coordinate transform from manifest: (x,y,z) -> (x,z,-y)
   // This is Rx(-90deg) rotation to convert from data space to three.js space
@@ -241,7 +247,7 @@ async function loadData() {
   for (let i=0;i<ids.length;i++) indexOf.set(ids[i], i);
 
   debugLog('loadData: complete');
-  return {manifest, positions, ids, idToName, jumps, indexOf, stationSystemSet, dataRelease};
+  return {manifest, positions, ids, idToName, jumps, indexOf, stationSystemSet, blackHoleSystemSet, dataRelease};
 }
 
 function computeBounds(positions) {
@@ -367,21 +373,25 @@ function setupSearch(data, focusOnSystem) {
   });
 }
 
-function makeStarfield(positions, ids, stationSystemSet) {
+function makeStarfield(positions, ids, stationSystemSet, blackHoleSystemSet) {
   debugLog('makeStarfield: creating Points for', positions.length / 3, 'stars');
   
   const group = new THREE.Group();
   
-  // Separate positions and colors for regular and station systems
+  // Separate positions and colors for regular, station, and black hole systems
   const regularPositions = [];
   const regularColors = [];
   const regularIndices = []; // Map back to original data index
   const stationPositions = [];
   const stationColors = [];
   const stationIndices = []; // Map back to original data index
+  const blackHolePositions = [];
+  const blackHoleColors = [];
+  const blackHoleIndices = []; // Map back to original data index
   
   for (let i = 0; i < ids.length; i++) {
     const systemId = ids[i];
+    const isBlackHole = blackHoleSystemSet.has(systemId);
     const hasStation = stationSystemSet.has(systemId);
     const posIdx = i * 3;
     
@@ -389,7 +399,12 @@ function makeStarfield(positions, ids, stationSystemSet) {
     const y = positions[posIdx + 1];
     const z = positions[posIdx + 2];
     
-    if (hasStation) {
+    if (isBlackHole) {
+      // Bright orange-white for black holes
+      blackHolePositions.push(x, y, z);
+      blackHoleColors.push(1.0, 0.8, 0.6); // Orange-tinted white
+      blackHoleIndices.push(i);
+    } else if (hasStation) {
       // Bright red for station systems
       stationPositions.push(x, y, z);
       stationColors.push(1.0, 0.0, 0.0); // Pure red
@@ -446,7 +461,29 @@ function makeStarfield(positions, ids, stationSystemSet) {
     group.add(pts);
   }
   
-  debugLog('makeStarfield: created', regularPositions.length / 3, 'regular stars and', stationPositions.length / 3, 'station stars');
+  // Create black hole systems points (2x larger than stations with glow)
+  if (blackHolePositions.length > 0) {
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(blackHolePositions), 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(blackHoleColors), 3));
+    
+    const mat = new THREE.PointsMaterial({
+      size: 15.0, // 2x larger than stations (7.5 * 2)
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 1.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    
+    const pts = new THREE.Points(geom, mat);
+    pts.frustumCulled = false;
+    pts.userData.indexMap = blackHoleIndices; // Store mapping
+    group.add(pts);
+  }
+  
+  debugLog('makeStarfield: created', regularPositions.length / 3, 'regular stars,', stationPositions.length / 3, 'station stars, and', blackHolePositions.length / 3, 'black holes');
   return group;
 }
 
@@ -780,7 +817,7 @@ function ensureRouteTableInViewport(element) {
   debugLog('main: data loaded');
   const releaseLabel = data.dataRelease || 'unknown';
   setDataReleaseBadge(`data: ${releaseLabel}`);
-  const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet);
+  const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet, data.blackHoleSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
 
@@ -859,10 +896,17 @@ function ensureRouteTableInViewport(element) {
       const sysId = data.ids[systemIndex];
       const name = data.idToName[String(sysId)] || String(sysId);
       const hasStation = data.stationSystemSet.has(sysId);
+      const isBlackHole = data.blackHoleSystemSet.has(sysId);
       
       let labelText;
       if (labelType === 'focus') {
-        labelText = hasStation ? `🛰️ ${name}` : name;
+        if (isBlackHole) {
+          labelText = `⚫ ${name}`;
+        } else if (hasStation) {
+          labelText = `🛰️ ${name}`;
+        } else {
+          labelText = name;
+        }
       } else if (labelType === 'routeStart') {
         labelText = `🚀 START: ${name}`;
       } else if (labelType === 'routeEnd') {
@@ -1177,7 +1221,16 @@ function ensureRouteTableInViewport(element) {
         const sysId = data.ids[originalIndex];
         const name = data.idToName[String(sysId)] || String(sysId);
         const hasStation = data.stationSystemSet.has(sysId);
-        labelDiv.textContent = hasStation ? `🛰️ ${name}` : name;
+        const isBlackHole = data.blackHoleSystemSet.has(sysId);
+        
+        // Add special emoji for black holes and stations
+        if (isBlackHole) {
+          labelDiv.textContent = `⚫ ${name}`;
+        } else if (hasStation) {
+          labelDiv.textContent = `🛰️ ${name}`;
+        } else {
+          labelDiv.textContent = name;
+        }
         
         const x = data.positions[originalIndex*3+0];
         const y = data.positions[originalIndex*3+1];

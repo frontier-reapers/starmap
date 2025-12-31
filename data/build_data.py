@@ -191,19 +191,25 @@ def main():
     (out_dir / "systems_names.json").write_text(json.dumps(names, ensure_ascii=False))
     (out_dir / "jumps.bin").write_bytes(flat_jumps.tobytes())
     (out_dir / "systems_with_stations.bin").write_bytes(station_ids.tobytes())
+    
+    # Black hole systems (hardcoded IDs)
+    black_hole_ids = array.array('I', [30000001, 30000002, 30000003])
+    (out_dir / "systems_black_holes.bin").write_bytes(black_hole_ids.tobytes())
 
     manifest = {
         "counts": {
             "systems": len(systems),
             "jumps": len(jumps),
-            "systems_with_stations": len(station_ids)
+            "systems_with_stations": len(station_ids),
+            "systems_black_holes": len(black_hole_ids)
         },
         "schema": {
             "systems_positions.bin": {"type":"Float32Array","components":3},
             "systems_ids.bin": {"type":"Uint32Array"},
             "systems_names.json": {"type":"MapIdToName"},
             "jumps.bin": {"type":"Uint32Array","components":2,"meaning":"pairs of system IDs [a,b]"},
-            "systems_with_stations.bin": {"type":"Uint32Array","meaning":"IDs of systems with NPC stations"}
+            "systems_with_stations.bin": {"type":"Uint32Array","meaning":"IDs of systems with NPC stations"},
+            "systems_black_holes.bin": {"type":"Uint32Array","meaning":"IDs of black hole systems"}
         },
         "coord_system": {
             "units": "lightyears",
@@ -220,6 +226,7 @@ def main():
         "systems_count": len(systems),
         "filtered_systems": filtered_count,
         "systems_with_stations": len(station_ids),
+        "systems_black_holes": len(black_hole_ids),
         "jumps_count": len(flat_jumps) // 2,
         "filtered_jumps": filtered_jumps,
         "release": args.release,
