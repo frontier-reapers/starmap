@@ -379,10 +379,10 @@ function makeCircleTexture(size = 64) {
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
   
-  // Draw a circle with soft edges
+  // Draw a bright circle with sharper edges for better visibility
   const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.8, 'rgba(255, 255, 255, 1)');
   gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
   
   ctx.fillStyle = gradient;
