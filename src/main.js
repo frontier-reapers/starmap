@@ -131,7 +131,8 @@ function makeGlowSprite(color = 0xffaa00, size = 128) {
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    opacity: 0.9
+    opacity: 0.9,
+    sizeAttenuation: false  // Keep constant screen size regardless of distance
   });
   const sprite = new THREE.Sprite(material);
   sprite.visible = false;
@@ -610,6 +611,11 @@ function makeDraggable(element, orbitControls) {
   
   // Export state for hover detection
   element.isDraggingRoutePanel = () => isDragging;
+  
+  // Prevent all mouse events from reaching the canvas underneath
+  element.addEventListener('mousemove', (e) => {
+    e.stopPropagation();
+  });
   
   element.addEventListener('mousedown', (e) => {
     // Only start drag if clicking on the element itself or header, not table rows
@@ -1146,14 +1152,19 @@ function ensureRouteTableInViewport(element) {
         const y = data.positions[originalIndex*3+1];
         const z = data.positions[originalIndex*3+2];
         
-        labelObj.position.set(x, y + radius * 0.003, z);
+        // Calculate distance-based offset for consistent screen-space positioning
+        const systemPos = new THREE.Vector3(x, y, z);
+        const distance = camera.position.distanceTo(systemPos);
+        const offsetScale = distance * 0.015; // Scale offset based on distance
+        
+        labelObj.position.set(x, y + offsetScale, z);
         labelObj.visible = true;
         labelDiv.classList.add('hovered');
 
         // Position and show hover sprite on the actual system
-        const spriteScale = Math.max(radius * 0.01, 30);
+        // Fixed screen size of 0.05 units (sizeAttenuation: false means scale is in screen space)
         hoverSprite.position.set(x, y, z);
-        hoverSprite.scale.set(spriteScale, spriteScale, spriteScale);
+        hoverSprite.scale.set(0.05, 0.05, 0.05);
         hoverSprite.visible = true;
       } else {
         labelObj.visible = false;
