@@ -889,7 +889,7 @@ function ensureRouteTableInViewport(element) {
   const releaseLabel = data.dataRelease || 'local-build';
   const buildLabel = cacheVersion ? cacheVersion.slice(0, 7) : 'unknown';
   setDataReleaseBadge(`DATA: ${releaseLabel}, BUILD: ${buildLabel}`);
-  setOverlayText(`Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan • DATA: ${releaseLabel} • BUILD: ${buildLabel}`);
+  setOverlayText('Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan');
   const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet, data.blackHoleSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
