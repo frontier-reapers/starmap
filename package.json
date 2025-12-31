@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx http-server . -p 3000 -c-1 -o /public/",
+    "prebuild": "node build-info.js",
     "test": "npm run test:unit:js && npm run test:unit:py",
     "test:unit": "npm run test:unit:js && npm run test:unit:py",
     "test:unit:js": "vitest run tests/unit",

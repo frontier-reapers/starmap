@@ -70,6 +70,28 @@ debugLog('module loaded', { href: typeof location !== 'undefined' ? location.hre
 const DATA_BASE = './data/';
 const VERSION_KEY = 'starmap_data_version_v1'; // bump if data format changes
 
+// Cache-bust parameter (will be populated after loading build-info)
+let cacheVersion = '';
+
+// Load build info for cache-busting
+async function loadBuildInfo() {
+  try {
+    const response = await fetch('./build-info.json', { cache: 'no-store' });
+    if (response.ok) {
+      const buildInfo = await response.json();
+      cacheVersion = buildInfo.commit;
+      debugLog('Build info loaded', buildInfo);
+    }
+  } catch (e) {
+    debugLog('Could not load build-info.json:', e);
+  }
+}
+
+// Helper to add cache-bust param to URLs
+function cacheBustUrl(path) {
+  return cacheVersion ? path + '?v=' + cacheVersion : path;
+}
+
 function extractDataRelease(manifest) {
   if (!manifest || typeof manifest !== 'object') return null;
   const meta = manifest.meta || manifest.metadata;
@@ -162,12 +184,12 @@ async function loadData() {
   // data so the scene still renders.
   debugLog('loadData: fetching manifest and binary blobs...');
   const [manifest, posBuf, idsBuf, namesRes, jumpsBuf, stationsBuf] = await Promise.all([
-    fetch(DATA_BASE + 'manifest.json').then(r => r.json()),
-    fetchArrayBuffer(DATA_BASE + 'systems_positions.bin'),
-    fetchArrayBuffer(DATA_BASE + 'systems_ids.bin'),
-    fetch(DATA_BASE + 'systems_names.json').then(r => r.json()),
-    fetchArrayBuffer(DATA_BASE + 'jumps.bin'),
-    fetchArrayBuffer(DATA_BASE + 'systems_with_stations.bin')
+    fetch(cacheBustUrl(DATA_BASE + 'manifest.json')).then(r => r.json()),
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_positions.bin')),
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_ids.bin')),
+    fetch(cacheBustUrl(DATA_BASE + 'systems_names.json')).then(r => r.json()),
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'jumps.bin')),
+    fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_with_stations.bin'))
   ]);
   const dataRelease = extractDataRelease(manifest);
   debugLog('loadData: data release', dataRelease);
@@ -745,6 +767,7 @@ function ensureRouteTableInViewport(element) {
     debugLog('main: exposed camera and controls to window for testing');
   }
 
+  await loadBuildInfo();
   const data = await loadData();
   debugLog('main: data loaded');
   const releaseLabel = data.dataRelease || 'unknown';

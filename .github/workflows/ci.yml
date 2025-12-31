@@ -151,6 +151,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Generate build info for cache-busting
+        run: |
+          mkdir -p public
+          echo "{\"commit\":\"$(git rev-parse --short HEAD)\",\"timestamp\":$(date +%s)000,\"buildDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/build-info.json
+          cat public/build-info.json
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       

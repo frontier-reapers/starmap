@@ -83,6 +83,9 @@ out/
 logs/
 *.log
 
+# Build artifacts
+public/build-info.json
+
 # Environment
 .env
 .env.local
