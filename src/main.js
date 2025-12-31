@@ -171,6 +171,7 @@ function setOverlayText(text) {
   } catch (e) {
     debugLog('setOverlayText error', e);
   }
+}
 
 function makeGlowSprite(color = 0xffaa00, size = 128) {
   const canvas = document.createElement('canvas');
