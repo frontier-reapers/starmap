@@ -857,7 +857,8 @@ function ensureRouteTableInViewport(element) {
   const data = await loadData();
   debugLog('main: data loaded');
   const releaseLabel = data.dataRelease || 'unknown';
-  setDataReleaseBadge(`data: ${releaseLabel}`);
+  const buildLabel = cacheVersion ? cacheVersion.slice(0, 7) : 'unknown';
+  setDataReleaseBadge(`DATA: ${releaseLabel}, BUILD: ${buildLabel}`);
   const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet, data.blackHoleSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
