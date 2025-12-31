@@ -162,6 +162,16 @@ function setDataReleaseBadge(text) {
   }
 }
 
+function setOverlayText(text) {
+  try {
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+      overlay.textContent = text;
+    }
+  } catch (e) {
+    debugLog('setOverlayText error', e);
+  }
+
 function makeGlowSprite(color = 0xffaa00, size = 128) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
@@ -200,6 +210,25 @@ async function fetchArrayBuffer(path) {
   return buf;
 }
 
+async function fetchJsonSafe(path, label = 'json') {
+  debugLog('fetchJsonSafe:', path);
+  const res = await fetch(path);
+  debugLog('fetch response:', path, { ok: res.ok, status: res.status });
+  if (!res.ok) throw new Error(`Failed to fetch ${label} (${path}), status ${res.status}`);
+
+  const contentType = (res.headers && res.headers.get('content-type')) || '';
+  const text = await res.text();
+  if (!contentType.includes('application/json')) {
+    throw new Error(`${label} is not JSON (content-type=${contentType || 'unknown'})`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    debugLog('fetchJsonSafe parse error', { path, preview: text.slice(0, 120) });
+    throw new Error(`${label} JSON parse failed: ${e.message}`);
+  }
+}
+
 async function loadData() {
   // (Optional) you could store in IndexedDB; to keep this minimal, we just fetch
   // and set a flag in localStorage so you could later skip refetching or rely on HTTP cache.
@@ -211,10 +240,10 @@ async function loadData() {
   // data so the scene still renders.
   debugLog('loadData: fetching manifest and binary blobs...');
   const [manifest, posBuf, idsBuf, namesRes, jumpsBuf, stationsBuf, blackHolesBuf] = await Promise.all([
-    fetch(cacheBustUrl(DATA_BASE + 'manifest.json')).then(r => r.json()),
+    fetchJsonSafe(cacheBustUrl(DATA_BASE + 'manifest.json'), 'manifest'),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_positions.bin')),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_ids.bin')),
-    fetch(cacheBustUrl(DATA_BASE + 'systems_names.json')).then(r => r.json()),
+    fetchJsonSafe(cacheBustUrl(DATA_BASE + 'systems_names.json'), 'systems_names'),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'jumps.bin')),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_with_stations.bin')),
     fetchArrayBuffer(cacheBustUrl(DATA_BASE + 'systems_black_holes.bin'))
@@ -859,6 +888,7 @@ function ensureRouteTableInViewport(element) {
   const releaseLabel = data.dataRelease || 'local-build';
   const buildLabel = cacheVersion ? cacheVersion.slice(0, 7) : 'unknown';
   setDataReleaseBadge(`DATA: ${releaseLabel}, BUILD: ${buildLabel}`);
+  setOverlayText(`Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan • DATA: ${releaseLabel} • BUILD: ${buildLabel}`);
   const starPoints = makeStarfield(data.positions, data.ids, data.stationSystemSet, data.blackHoleSystemSet);
   scene.add(starPoints);
   debugLog('main: starPoints added to scene');
