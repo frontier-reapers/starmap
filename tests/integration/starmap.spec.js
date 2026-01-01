@@ -34,6 +34,7 @@ test.describe("Starmap Application", () => {
   test("should display debug panel with logs", async ({ page }) => {
     // Click the debug toggle to show the panel
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
@@ -47,6 +48,7 @@ test.describe("Starmap Application", () => {
   test("should load binary data successfully", async ({ page }) => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
@@ -68,6 +70,7 @@ test.describe("Starmap Application", () => {
   test("should render stars with non-zero bounds", async ({ page }) => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -129,6 +132,7 @@ test.describe("Starmap Application", () => {
 
   test("should load station systems data", async ({ page }) => {
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -170,6 +174,7 @@ test.describe("Starmap Application", () => {
     // Wait for page to be ready and open debug panel
     await page.waitForTimeout(2000);
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -983,6 +988,7 @@ test.describe("Starmap Application", () => {
   test("should load black hole systems and report count", async ({ page }) => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
+    await expect(debugBtn).toBeVisible({ timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
