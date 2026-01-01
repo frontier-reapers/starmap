@@ -211,6 +211,26 @@ Behavior and acceptance:
 - If no flags are provided the builder falls back to the historical default IDs `[30000001, 30000002, 30000003]`.
 - The generated `manifest.json` includes `counts.systems_black_holes` so consumers can show layer counts without scanning binaries.
 
+### Data Builder CLI options (hashing & manifest)
+
+- `--hash` — Compute SHA-256 checksums for all output blobs (binary and JSON blobs) and include them in `manifest.json` under the `blobs` object as `{ "<filename>": { "sha256": "..." } }`.
+- When `--hash` is provided, `build_data.py` will compute checksums for each written output file (e.g., `systems_positions.bin`, `systems_ids.bin`, `jumps.bin`, `systems_names.json`, etc.) and embed the hex SHA-256 digest in `manifest.json` so downstream tooling and the frontend can validate cached assets.
+- The `--release` flag implies similar behavior (the CI uses `--release` to produce a hashed manifest for reproducibility). If you want checksum metadata in local builds, pass `--hash` explicitly.
+
+### Manifest schema additions
+
+- `bounds` — An object containing `min`, `max`, `center`, and `radius` computed from `systems_positions.bin`. This allows the frontend to quickly fit the dataset to view without recomputing bounds on every page load.
+- `blobs` — An optional object mapping output filenames to metadata such as `sha256`. Example:
+
+```json
+"blobs": {
+   "systems_positions.bin": { "sha256": "..." },
+   "systems_ids.bin": { "sha256": "..." }
+}
+```
+
+These additions are emitted when `--hash` or `--release` are used; the CI also enforces presence of `bounds` and `systems_positions.bin` sha256 for release builds.
+
 ### Output: Binary Files (`public/data/`)
 
 - **systems_positions.bin** - Float32Array of (x,y,z) coordinates in light-years with Rx(-90°) transform

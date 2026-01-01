@@ -18,6 +18,9 @@ npm install
 # Generate binary data files
 npm run build:data
 
+# To compute SHA-256 checksums for output blobs and include them in the generated manifest:
+python data/build_data.py --db data/static.db --out public/data --hash
+
 # Start development server
 npm run dev
 ```
