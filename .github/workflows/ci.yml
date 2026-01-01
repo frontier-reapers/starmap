@@ -201,6 +201,18 @@ jobs:
           else
             echo "No RELEASE_TAG available; skipping manifest release check"
           fi
+          # Ensure manifest contains computed bounds
+          if ! jq -e '.bounds.center and .bounds.radius' public/data/manifest.json >/dev/null; then
+            echo "ERROR: manifest missing bounds (center/radius)"; exit 1
+          fi
+          # Only require blob SHA-256 when a release tag is set (hashing is implied for releases)
+          if [ -n "$RELEASE_TAG" ]; then
+            if ! jq -e '.blobs["systems_positions.bin"].sha256' public/data/manifest.json >/dev/null; then
+              echo "ERROR: manifest missing blobs[\"systems_positions.bin\"].sha256"; exit 1
+            fi
+          else
+            echo "No RELEASE_TAG set — skipping blobs.sha256 validation"
+          fi
 
       - name: Upload built public assets
         uses: actions/upload-artifact@v4

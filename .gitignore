@@ -87,6 +87,9 @@ logs/
 public/build-info.json
 build-info.json
 
+# Generated test reports
+playwright-report/
+
 # Environment
 .env
 .env.local

@@ -11,8 +11,9 @@ import build_data
 def _create_db_with_duplicates(path):
     con = sqlite3.connect(path)
     cur = con.cursor()
+    # Create a systems table without a uniqueness constraint so we can insert duplicates
     cur.execute(
-        "CREATE TABLE systems (solarSystemId INTEGER PRIMARY KEY, name TEXT, centerX REAL, centerY REAL, centerZ REAL)"
+        "CREATE TABLE systems (solarSystemId INTEGER, name TEXT, centerX REAL, centerY REAL, centerZ REAL)"
     )
     # Insert duplicate IDs
     cur.execute(

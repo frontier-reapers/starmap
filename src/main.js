@@ -17,8 +17,10 @@ const DEBUG_ENABLED = (() => {
   }
 })();
 
+// Debug panel visibility can be toggled at runtime via the UI button or keyboard.
+let DEBUG_VISIBLE = false;
+
 function _makeDebugPanel() {
-  if (!DEBUG_ENABLED) return null;
   try {
     let panel = document.getElementById("debug-log");
     if (!panel) {
@@ -33,15 +35,68 @@ function _makeDebugPanel() {
       panel.style.color = "#0f0";
       panel.style.fontSize = "11px";
       panel.style.padding = "6px";
+      panel.style.minWidth = "220px";
+      panel.style.minHeight = "80px";
+      panel.style.border = "1px solid rgba(255,140,60,0.2)";
       panel.style.zIndex = 99999;
       panel.style.whiteSpace = "pre-wrap";
+      panel.setAttribute("role", "log");
+      panel.setAttribute("aria-live", "polite");
+      // Add a small visually-friendly header so the panel is obvious when shown
+      const hdr = document.createElement("div");
+      hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
+      hdr.style.fontSize = "12px";
+      hdr.style.fontWeight = "600";
+      hdr.style.marginBottom = "6px";
+      hdr.style.color = "#ffdca3";
+      panel.appendChild(hdr);
       document.body.appendChild(panel);
     }
+
+    // Control visibility: show if debug enabled via URL or toggled visible
+    const visible = DEBUG_ENABLED || DEBUG_VISIBLE;
+    panel.style.display = visible ? "block" : "none";
+    panel.setAttribute("aria-hidden", visible ? "false" : "true");
     return panel;
   } catch {
     return null;
   }
 }
+
+function showDebugPanel() {
+  DEBUG_VISIBLE = true;
+  const p = _makeDebugPanel();
+  if (p) p.style.display = "block";
+  // Provide immediate feedback in the panel and console
+  debugLog("debug panel: shown");
+  const btn = document.getElementById("tool-debug");
+  if (btn) btn.setAttribute("aria-pressed", "true");
+  console.log("showDebugPanel: invoked; panel exists=", !!p);
+}
+
+function hideDebugPanel() {
+  DEBUG_VISIBLE = false;
+  const p = _makeDebugPanel();
+  if (p) p.style.display = "none";
+  debugLog("debug panel: hidden");
+  const btn = document.getElementById("tool-debug");
+  if (btn) btn.setAttribute("aria-pressed", "false");
+  console.log("hideDebugPanel: invoked; panel exists=", !!p);
+}
+
+function toggleDebugPanel() {
+  const p = _makeDebugPanel();
+  // Use computed style to determine visibility reliably (handles cases where
+  // inline `style.display` may be empty but computed style is 'none')
+  const isShown = p && window.getComputedStyle(p).display !== "none";
+  if (isShown) hideDebugPanel();
+  else showDebugPanel();
+}
+
+// Expose for HTML onclick fallback and console debugging
+window.toggleDebugPanel = toggleDebugPanel;
+window.showDebugPanel = showDebugPanel;
+window.hideDebugPanel = hideDebugPanel;
 
 function debugLog(...args) {
   try {
@@ -85,6 +140,123 @@ window.addEventListener("unhandledrejection", (ev) => {
     /* ignore logging errors */
   }
 });
+
+// Wire up the debug toggle button (if present) and add keyboard shortcut
+try {
+  // Button toggles debug panel visibility
+  const dbgBtn = document.getElementById("tool-debug");
+  if (dbgBtn) {
+    // Prevent pointer events from reaching the canvas beneath the UI
+    const _stop = (ev) => {
+      try {
+        ev.stopPropagation();
+        if (ev.cancelable) ev.preventDefault();
+      } catch (e) {
+        /* ignore */
+      }
+    };
+    // Attach to common pointer / mouse / touch events so drags & clicks don't fall through
+    dbgBtn.addEventListener('pointerdown', _stop, { passive: false });
+    dbgBtn.addEventListener('mousedown', _stop, { passive: false });
+    dbgBtn.addEventListener('touchstart', _stop, { passive: false });
+    // Also ensure the whole tool panel captures pointer events
+    try {
+      const panel = document.getElementById('tool-panel');
+      if (panel) {
+        panel.addEventListener('pointerdown', _stop, { passive: false });
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    // If an inline `onclick` fallback exists (for very early clicks before the
+    // module loads), remove it now that the module has initialized to avoid
+    // duplicate click handling between the inline handler and this listener.
+    try {
+      if (dbgBtn.getAttribute && dbgBtn.getAttribute("onclick")) {
+        console.log("Removing inline onclick fallback from #tool-debug to avoid double-handling");
+        try {
+          dbgBtn.removeAttribute("onclick");
+        } catch (err) {}
+        // Also clear any legacy `onclick` property that the browser may have set
+        try {
+          dbgBtn.onclick = null;
+        } catch (err) {}
+      }
+    } catch (err) {
+      /* ignore */
+    }
+
+    dbgBtn.addEventListener("click", (ev) => {
+      console.log("tool-debug clicked");
+      ev.preventDefault();
+      // Avoid double-handling clicks when an inline onclick fallback already
+      // performed the toggle (inline handlers run before addEventListener). If
+      // the inline handler set a recent flag, skip handling here.
+      try {
+        if (window.__lastDebugClick && Date.now() - window.__lastDebugClick < 250) {
+          console.log("skipping duplicate debug click (handled by inline fallback)");
+          // Clear the marker so future clicks are handled normally
+          window.__lastDebugClick = null;
+          return;
+        }
+      } catch (err) {
+        /* ignore */
+      }
+      try {
+        // Mark that the module-handled click occurred so any inline fallback
+        // handler can skip its own toggle to avoid double-handling.
+        try { dbgBtn.setAttribute('data-handled-by-module', String(Date.now())); } catch (err) {}
+        toggleDebugPanel();
+        // Clear the marker after a short delay to keep state clean
+        setTimeout(() => { try { dbgBtn.removeAttribute('data-handled-by-module'); } catch (err) {} }, 250);
+      } catch (err) {
+        console.error("toggleDebugPanel failed:", err);
+        // Best-effort: ensure a visible panel exists so the user can see errors
+        try {
+          let p = document.getElementById("debug-log");
+          if (!p) {
+            p = document.createElement("pre");
+            p.id = "debug-log";
+            p.style.position = "fixed";
+            p.style.right = "8px";
+            p.style.bottom = "8px";
+            p.style.background = "rgba(0,0,0,0.75)";
+            p.style.color = "#0f0";
+            p.style.padding = "8px";
+            p.style.minWidth = "220px";
+            p.style.minHeight = "80px";
+            p.style.zIndex = 99999;
+            document.body.appendChild(p);
+          }
+          p.style.display = "block";
+          p.textContent += "toggleDebugPanel failed: " + String(err) + "\n";
+        } catch (err2) {
+          console.error("Failed to create fallback debug panel:", err2);
+        }
+      }
+    });
+  }
+
+  // Keyboard shortcut: Ctrl+Shift+D toggles debug panel
+  window.addEventListener("keydown", (ev) => {
+    // Ignore if typing in input or textarea
+    const tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    // Log key events for diagnostics in test runs
+    console.log("keydown event:", { ctrl: ev.ctrlKey, shift: ev.shiftKey, code: ev.code, target: tag });
+    if (ev.ctrlKey && ev.shiftKey && ev.code === "KeyD") {
+      ev.preventDefault();
+      try {
+        console.log("keyboard shortcut detected: toggling debug panel");
+        toggleDebugPanel();
+      } catch (err) {
+        console.error("toggleDebugPanel failed (keyboard):", err);
+      }
+    }
+  });
+} catch (e) {
+  debugLog("debug toggle wiring failed", e);
+}
 
 debugLog("module loaded", {
   href: typeof location !== "undefined" ? location.href : null,
