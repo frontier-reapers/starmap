@@ -112,35 +112,35 @@ jobs:
       - name: Create data directories
         run: mkdir -p data public/data
 
-      - name: Validate `build_data.py` black hole flags (lightweight)
+        - name: Validate `build_data.py` black hole flags (lightweight)
         run: |
           set -euo pipefail
           python - <<'PY'
-import sqlite3, json, sys, os
-db = 'tmp_ci.db'
-out = 'tmp_ci_out'
-os.makedirs(out, exist_ok=True)
-con=sqlite3.connect(db)
-cur=con.cursor()
-cur.execute('CREATE TABLE systems (solarSystemId INTEGER PRIMARY KEY, name TEXT, centerX REAL, centerY REAL, centerZ REAL)')
-cur.execute('INSERT INTO systems (solarSystemId,name,centerX,centerY,centerZ) VALUES (?,?,?,?,?)',(1,'S1',0,0,0))
-cur.execute('INSERT INTO systems (solarSystemId,name,centerX,centerY,centerZ) VALUES (?,?,?,?,?)',(8001,'BH1',0,0,0))
-con.commit(); con.close()
-with open('bh.csv','w') as f: f.write('8001')
-# run build_data with valid CSV
-rc = os.system(f"{sys.executable} data/build_data.py --db {db} --out {out} --black-holes-csv bh.csv")
-if rc != 0:
-    print('ERROR: build_data failed for valid black-holes CSV', file=sys.stderr); sys.exit(1)
-mf = json.load(open(f"{out}/manifest.json"))
-if mf.get('counts', {}).get('systems_black_holes') != 1:
-    print('ERROR: manifest missing expected systems_black_holes count', file=sys.stderr); sys.exit(1)
-# run build_data with invalid CSV and expect failure
-with open('bh2.csv','w') as f: f.write('9999')
-rc2 = os.system(f"{sys.executable} data/build_data.py --db {db} --out out2 --black-holes-csv bh2.csv")
-if rc2 == 0:
-    print('ERROR: build_data succeeded unexpectedly with missing black hole ID', file=sys.stderr); sys.exit(1)
-print('OK: build_data black hole validation tests passed')
-PY
+          import sqlite3, json, sys, os
+          db = 'tmp_ci.db'
+          out = 'tmp_ci_out'
+          os.makedirs(out, exist_ok=True)
+          con=sqlite3.connect(db)
+          cur=con.cursor()
+          cur.execute('CREATE TABLE systems (solarSystemId INTEGER PRIMARY KEY, name TEXT, centerX REAL, centerY REAL, centerZ REAL)')
+          cur.execute('INSERT INTO systems (solarSystemId,name,centerX,centerY,centerZ) VALUES (?,?,?,?,?)',(1,'S1',0,0,0))
+          cur.execute('INSERT INTO systems (solarSystemId,name,centerX,centerY,centerZ) VALUES (?,?,?,?,?)',(8001,'BH1',0,0,0))
+          con.commit(); con.close()
+          with open('bh.csv','w') as f: f.write('8001')
+          # run build_data with valid CSV
+          rc = os.system(f"{sys.executable} data/build_data.py --db {db} --out {out} --black-holes-csv bh.csv")
+          if rc != 0:
+            print('ERROR: build_data failed for valid black-holes CSV', file=sys.stderr); sys.exit(1)
+          mf = json.load(open(f"{out}/manifest.json"))
+          if mf.get('counts', {}).get('systems_black_holes') != 1:
+            print('ERROR: manifest missing expected systems_black_holes count', file=sys.stderr); sys.exit(1)
+          # run build_data with invalid CSV and expect failure
+          with open('bh2.csv','w') as f: f.write('9999')
+          rc2 = os.system(f"{sys.executable} data/build_data.py --db {db} --out out2 --black-holes-csv bh2.csv")
+          if rc2 == 0:
+            print('ERROR: build_data succeeded unexpectedly with missing black hole ID', file=sys.stderr); sys.exit(1)
+          print('OK: build_data black hole validation tests passed')
+          PY
 
       - name: Generate build info for integration job (commit)
         run: node build-info.js
