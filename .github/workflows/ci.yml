@@ -7,6 +7,12 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+# Grant minimum required permissions to allow dependent tools (CodeQL, uploads)
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
 jobs:
   # Job 1: Run JavaScript unit tests
   test-js:
