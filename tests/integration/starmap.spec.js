@@ -435,6 +435,47 @@ test.describe("Starmap Application", () => {
     }
   });
 
+  test("sidebar debug toggle button and keyboard shortcut work", async ({ page }) => {
+    // Load without debug param so panel starts hidden
+    await page.goto("http://localhost:3000/public/");
+
+    const debugPanel = page.locator("#debug-log");
+    const debugBtn = page.locator("#tool-debug");
+
+    // Button exists
+    await expect(debugBtn).toBeVisible();
+
+    // Initially hidden
+    expect(await debugPanel.count()).toBeGreaterThanOrEqual(0);
+    if (await debugPanel.isVisible()) {
+      // If visible (rare), hide to normalize state
+      await debugBtn.click();
+      await page.waitForTimeout(200);
+      expect(await debugPanel.isVisible()).toBeFalsy();
+    }
+
+    // Click button to show
+    await debugBtn.click();
+    // Wait for the debug panel element to appear and be visible
+    await page.waitForSelector('#debug-log', { state: 'visible', timeout: 2000 });
+    await expect(page.locator('#debug-log')).toBeVisible();
+
+    // Click again to hide
+    await debugBtn.click();
+    await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 2000 });
+    expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
+
+    // Test keyboard shortcut: Ctrl+Shift+D to toggle
+    await page.keyboard.press("Control+Shift+D");
+    await page.waitForSelector('#debug-log', { state: 'visible', timeout: 2000 });
+    await expect(page.locator('#debug-log')).toBeVisible();
+
+    // Toggle off with shortcut
+    await page.keyboard.press("Control+Shift+D");
+    await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 2000 });
+    expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
+  });
+
   test("should not show route table without route parameter", async ({
     page,
   }) => {

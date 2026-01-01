@@ -17,8 +17,10 @@ const DEBUG_ENABLED = (() => {
   }
 })();
 
+// Debug panel visibility can be toggled at runtime via the UI button or keyboard.
+let DEBUG_VISIBLE = false;
+
 function _makeDebugPanel() {
-  if (!DEBUG_ENABLED) return null;
   try {
     let panel = document.getElementById("debug-log");
     if (!panel) {
@@ -35,12 +37,42 @@ function _makeDebugPanel() {
       panel.style.padding = "6px";
       panel.style.zIndex = 99999;
       panel.style.whiteSpace = "pre-wrap";
+      panel.setAttribute("role", "log");
+      panel.setAttribute("aria-live", "polite");
       document.body.appendChild(panel);
     }
+
+    // Control visibility: show if debug enabled via URL or toggled visible
+    const visible = DEBUG_ENABLED || DEBUG_VISIBLE;
+    panel.style.display = visible ? "block" : "none";
+    panel.setAttribute("aria-hidden", visible ? "false" : "true");
     return panel;
   } catch {
     return null;
   }
+}
+
+function showDebugPanel() {
+  DEBUG_VISIBLE = true;
+  const p = _makeDebugPanel();
+  if (p) p.style.display = "block";
+  const btn = document.getElementById("tool-debug");
+  if (btn) btn.setAttribute("aria-pressed", "true");
+}
+
+function hideDebugPanel() {
+  DEBUG_VISIBLE = false;
+  const p = _makeDebugPanel();
+  if (p) p.style.display = "none";
+  const btn = document.getElementById("tool-debug");
+  if (btn) btn.setAttribute("aria-pressed", "false");
+}
+
+function toggleDebugPanel() {
+  const p = _makeDebugPanel();
+  const isShown = p && p.style.display !== "none";
+  if (isShown) hideDebugPanel();
+  else showDebugPanel();
 }
 
 function debugLog(...args) {
@@ -85,6 +117,31 @@ window.addEventListener("unhandledrejection", (ev) => {
     /* ignore logging errors */
   }
 });
+
+// Wire up the debug toggle button (if present) and add keyboard shortcut
+try {
+  // Button toggles debug panel visibility
+  const dbgBtn = document.getElementById("tool-debug");
+  if (dbgBtn) {
+    dbgBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      toggleDebugPanel();
+    });
+  }
+
+  // Keyboard shortcut: Ctrl+Shift+D toggles debug panel
+  window.addEventListener("keydown", (ev) => {
+    // Ignore if typing in input or textarea
+    const tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (ev.ctrlKey && ev.shiftKey && ev.code === "KeyD") {
+      ev.preventDefault();
+      toggleDebugPanel();
+    }
+  });
+} catch (e) {
+  debugLog("debug toggle wiring failed", e);
+}
 
 debugLog("module loaded", {
   href: typeof location !== "undefined" ? location.href : null,
