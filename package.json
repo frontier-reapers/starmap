@@ -11,6 +11,7 @@
     "test:unit:js": "vitest run tests/unit",
     "test:unit:py": "python -m pytest tests/unit/test_build_data.py -v",
     "test:integration": "playwright test",
+    "test:integration:ci": "playwright test --reporter=list",
     "test:all": "npm run test:unit && npm run test:integration",
     "test:watch": "vitest tests/unit",
     "build:data": "python data/build_data.py --db data/static.db --out public/data",

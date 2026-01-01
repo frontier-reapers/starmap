@@ -382,6 +382,39 @@
       user-select: none;
       z-index: 5;
     }
+    /* Error overlay styles */
+    #error-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      pointer-events: none; /* inner controls enable pointer-events */
+    }
+    #error-overlay[aria-hidden="false"] { pointer-events: auto; }
+    #error-overlay-inner {
+      max-width: 720px;
+      width: calc(100% - 48px);
+      background: rgba(16, 18, 22, 0.95);
+      color: #ffddd0;
+      border: 1px solid rgba(255,140,60,0.22);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 6px 16px rgba(255, 100, 40, 0.06);
+      font-family: 'Disket Mono', monospace;
+      text-align: left;
+    }
+    #error-overlay button {
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(180deg, rgba(255,140,60,0.18), rgba(255,120,40,0.12));
+      color: #fff;
+      font-weight: bold;
+    }
+    #error-overlay button:hover { filter: brightness(1.08); }
   </style>
   <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
   <script type="importmap">
@@ -403,7 +436,18 @@
   </div>
   <div id="app"></div>
   <div id="overlay">Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan</div>
+  <!-- Error overlay: hidden by default, shown on fetch failures -->
+  <div id="error-overlay" role="alertdialog" aria-hidden="true" style="display:none;">
+    <div id="error-overlay-inner">
+      <div id="error-message" aria-live="assertive">Failed to load data</div>
+      <div id="error-details" style="white-space:pre-wrap; font-size:12px; opacity:0.9; margin-top:8px;"></div>
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button id="error-retry">Retry</button>
+        <button id="error-copy">Copy error</button>
+      </div>
+    </div>
+  </div>
   <div id="data-release" aria-live="polite" role="status"></div>
-  <script type="module" src="../src/main.js"></script>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
