@@ -39,6 +39,7 @@ if [ ! -f "data/static.db" ]; then
         echo "Detected release: $RELEASE_TAG"
         echo "Downloading dataset from: $DOWNLOAD_URL"
         curl -L -o data/static.db "$DOWNLOAD_URL"
+    fi
     
     if [ ! -f "data/static.db" ]; then
         echo "ERROR: Download failed!"
