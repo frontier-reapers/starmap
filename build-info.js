@@ -20,3 +20,11 @@ console.log('Build info:', buildInfo);
 const outPath = path.join(process.cwd(), 'public', 'build-info.json');
 fs.writeFileSync(outPath, JSON.stringify(buildInfo, null, 2));
 console.log(`Build info written to ${outPath}`);
+// Also write to repository root so the deployed site (served from '/') can fetch /build-info.json
+try {
+  const rootOut = path.join(process.cwd(), 'build-info.json');
+  fs.writeFileSync(rootOut, JSON.stringify(buildInfo, null, 2));
+  console.log(`Build info also written to ${rootOut}`);
+} catch (e) {
+  // best-effort
+}
