@@ -24,6 +24,8 @@ import array
 import json
 import re
 import sys
+import math
+import hashlib
 from pathlib import Path
 
 # Try to import sqlite3, fall back to pysqlite3 if the built-in is missing
@@ -128,6 +130,51 @@ def validate_assets(
     return issues
 
 
+def compute_bounds(positions):
+    """Compute axis-aligned bounds, center and radius from a flattened positions array.
+
+    positions: array('f') with layout [x,y,z, x,y,z, ...]
+    Returns dict with keys: min, max, center, radius
+    """
+    if not positions:
+        return {
+            "min": [0.0, 0.0, 0.0],
+            "max": [0.0, 0.0, 0.0],
+            "center": [0.0, 0.0, 0.0],
+            "radius": 0.0,
+        }
+
+    xs = positions[0::3]
+    ys = positions[1::3]
+    zs = positions[2::3]
+
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    min_z, max_z = min(zs), max(zs)
+
+    center_x = (min_x + max_x) / 2.0
+    center_y = (min_y + max_y) / 2.0
+    center_z = (min_z + max_z) / 2.0
+
+    # radius: max distance from center
+    radius = 0.0
+    for x, y, z in zip(xs, ys, zs):
+        dx = x - center_x
+        dy = y - center_y
+        dz = z - center_z
+        d2 = dx * dx + dy * dy + dz * dz
+        if d2 > radius:
+            radius = d2
+    radius = math.sqrt(radius)
+
+    return {
+        "min": [min_x, min_y, min_z],
+        "max": [max_x, max_y, max_z],
+        "center": [center_x, center_y, center_z],
+        "radius": radius,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", required=True, help="Path to SQLite database")
@@ -157,6 +204,11 @@ def main():
         help="Column name in --black-holes-table containing the system ID (defaults to detected column)",
     )
     ap.add_argument("--release", help="Data release label (e.g., e6c4)")
+    ap.add_argument(
+        "--hash",
+        action="store_true",
+        help="Compute sha256 checksums for output blobs and include them in manifest",
+    )
     args = ap.parse_args()
 
     out_dir = Path(args.out)
@@ -378,12 +430,18 @@ def main():
     (out_dir / "systems_with_stations.bin").write_bytes(station_ids.tobytes())
     (out_dir / "systems_black_holes.bin").write_bytes(black_hole_ids.tobytes())
 
+    # Compute bounds so the frontend can skip recomputing them on load
+    bounds = compute_bounds(positions)
+
     manifest = {
         "counts": {
             "systems": len(systems),
             "jumps": len(jumps),
             "systems_with_stations": len(station_ids),
             "systems_black_holes": len(black_hole_ids),
+            # Compatibility fields requested by docs/todo
+            "stations": len(station_ids),
+            "black_holes": len(black_hole_ids),
         },
         "schema": {
             "systems_positions.bin": {"type": "Float32Array", "components": 3},
@@ -408,6 +466,27 @@ def main():
             "transform": "Rx(-90deg), i.e., (x,y,z)->(x,z,-y)",
         },
     }
+    # Persist bounds to manifest
+    manifest["bounds"] = bounds
+
+    # Optionally compute sha256 for blobs when requested (or when release is set)
+    if args.hash or args.release:
+        blobs = {}
+        for fname in [
+            "systems_positions.bin",
+            "systems_ids.bin",
+            "systems_names.json",
+            "jumps.bin",
+            "systems_with_stations.bin",
+            "systems_black_holes.bin",
+        ]:
+            p = out_dir / fname
+            if p.exists():
+                data = p.read_bytes()
+                h = hashlib.sha256(data).hexdigest()
+                blobs[fname] = {"sha256": h}
+        if blobs:
+            manifest["blobs"] = blobs
     if args.release:
         manifest["release"] = args.release
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))

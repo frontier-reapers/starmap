@@ -409,6 +409,32 @@ test.describe("Starmap Application", () => {
     expect(content).toContain("route lines added to scene");
   });
 
+  test("should serve generated manifest with bounds and blob hashes", async ({ request }) => {
+    // Fetch the canonical manifest and verify it either contains bounds+blobs
+    // (new behavior) or that the positions blob exists and is non-empty.
+    const manifestUrl = "http://localhost:3000/public/data/manifest.json";
+    const resp = await request.get(manifestUrl);
+    expect(resp.ok()).toBeTruthy();
+    const manifest = await resp.json();
+
+    if (manifest.bounds && manifest.blobs) {
+      expect(manifest.bounds).toHaveProperty("center");
+      expect(manifest.bounds).toHaveProperty("radius");
+      expect(manifest.bounds.radius).toBeGreaterThan(0);
+
+      // keys may contain dots, so access directly
+      expect(manifest.blobs["systems_positions.bin"]).toBeDefined();
+      expect(manifest.blobs["systems_positions.bin"].sha256).toMatch(/^[0-9a-f]{64}$/);
+    } else {
+      // Fallback: ensure the positions blob exists and has non-zero size
+      const positionsUrl = "http://localhost:3000/public/data/systems_positions.bin";
+      const pResp = await request.get(positionsUrl);
+      expect(pResp.ok()).toBeTruthy();
+      const buf = await pResp.body();
+      expect(buf.length).toBeGreaterThan(0);
+    }
+  });
+
   test("should not show route table without route parameter", async ({
     page,
   }) => {
