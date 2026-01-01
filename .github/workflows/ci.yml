@@ -106,6 +106,9 @@ jobs:
       
       - name: Create data directories
         run: mkdir -p data public/data
+
+      - name: Generate build info for integration job (commit)
+        run: node build-info.js
       
       - name: Download latest EVE Frontier static.db
         run: |
