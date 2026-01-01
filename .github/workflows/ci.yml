@@ -112,7 +112,7 @@ jobs:
       - name: Create data directories
         run: mkdir -p data public/data
 
-        - name: Validate `build_data.py` black hole flags (lightweight)
+      - name: Validate `build_data.py` black hole flags (lightweight)
         run: |
           set -euo pipefail
           python - <<'PY'
