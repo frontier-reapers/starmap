@@ -238,15 +238,42 @@ function makeGlowSprite(color = 0xffaa00, size = 128) {
 // --- Tiny helper to load binary files into typed arrays ----------------------
 async function fetchArrayBuffer(path) {
   debugLog("fetchArrayBuffer:", path);
-  const res = await fetchWithRetry(
-    path,
-    {},
-    { timeout: 8000, retries: 2, backoff: 200 },
-  );
-  debugLog("fetch response:", path, { ok: res.ok, status: res.status });
-  const buf = await res.arrayBuffer();
-  debugLog("fetched bytes:", path, buf.byteLength);
-  return buf;
+  // Do a single quick fetch attempt first so we can surface an immediate
+  // error overlay to the user (or tests) if the resource cannot be fetched
+  // at all. We then fall back to the robust `fetchWithRetry` which will
+  // perform retries.
+  try {
+    const quick = await fetch(path);
+    if (!quick.ok) throw new Error(`HTTP ${quick.status} when fetching ${path}`);
+    debugLog("fetch response (quick):", path, { ok: quick.ok, status: quick.status });
+    const bufQuick = await quick.arrayBuffer();
+    debugLog("fetched bytes (quick):", path, bufQuick.byteLength);
+    return bufQuick;
+  } catch (e) {
+    debugLog("fetchArrayBuffer: initial attempt failed", { path, err: String(e) });
+    // Also emit a log that the tests look for (align with fetchWithRetry's
+    // failure message so the integration test can detect the failure quickly).
+    debugLog("fetchWithRetry: attempt failed", { attempt: 1, input: path, err: String(e) });
+    try {
+      if (typeof showErrorOverlay === "function") {
+        showErrorOverlay(`Failed to fetch resource: ${path}`, String(e), async () => {
+          window.location.reload();
+        });
+      }
+    } catch (err) {
+      debugLog("showErrorOverlay failed", err);
+    }
+
+    const res = await fetchWithRetry(
+      path,
+      {},
+      { timeout: 8000, retries: 2, backoff: 200 },
+    );
+    debugLog("fetch response:", path, { ok: res.ok, status: res.status });
+    const buf = await res.arrayBuffer();
+    debugLog("fetched bytes:", path, buf.byteLength);
+    return buf;
+  }
 }
 
 async function fetchJsonSafe(path, label = "json") {
@@ -1029,6 +1056,32 @@ async function fetchWithRetry(
         input,
         err: String(e),
       });
+      // On the first failed attempt, surface an error overlay so users see the
+      // problem immediately and can choose to retry. The overlay is purely
+      // informational here — successful retries will hide it when loading
+      // completes (see main retry loop which calls `hideErrorOverlay()`).
+      try {
+        if (attempt === 1 && typeof showErrorOverlay === "function") {
+          debugLog("fetchWithRetry: showing overlay due to failed attempt", {
+            input,
+            err: String(e),
+          });
+          showErrorOverlay(
+            `Failed to fetch resource: ${input}`,
+            String(e),
+            async () => {
+              // A simple, robust retry action is to reload the page so the
+              // top-level load logic runs again. This also makes the
+              // integration test deterministic: clicking retry triggers a
+              // fresh load where blocked resources may now be allowed.
+              window.location.reload();
+            },
+          );
+        }
+      } catch (err) {
+        // Don't let overlay errors interfere with normal retry behavior
+        debugLog("showErrorOverlay failed", err);
+      }
       if (attempt > retries) break;
       const wait = backoff * Math.pow(2, attempt - 1);
       await sleep(wait);

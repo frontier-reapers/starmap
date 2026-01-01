@@ -33,6 +33,5 @@
   "coord_system": {
     "units": "lightyears",
     "transform": "Rx(-90deg), i.e., (x,y,z)->(x,z,-y)"
-  },
-  "release": "e6c4"
+  }
 }
