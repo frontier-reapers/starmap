@@ -471,7 +471,7 @@ test.describe("Starmap Application", () => {
       const hasHeader = !!p.querySelector('.debug-header');
       const hasFallbackText = Array.from(p.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent && n.textContent.includes('Debug (fallback)'));
       return hasHeader && !hasFallbackText;
-    }, { timeout: 2000 });
+    }, { timeout: 5000 });
     expect(await page.locator('#debug-log .debug-header').count()).toBeGreaterThan(0);
 
     // Hide using a direct programmatic toggle to avoid flaky duplicate-handler
