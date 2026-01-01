@@ -3,7 +3,9 @@
     "systems": 24026,
     "jumps": 6876,
     "systems_with_stations": 98,
-    "systems_black_holes": 3
+    "systems_black_holes": 3,
+    "stations": 98,
+    "black_holes": 3
   },
   "schema": {
     "systems_positions.bin": {
@@ -33,5 +35,23 @@
   "coord_system": {
     "units": "lightyears",
     "transform": "Rx(-90deg), i.e., (x,y,z)->(x,z,-y)"
+  },
+  "bounds": {
+    "min": [
+      -9107.6376953125,
+      -5383.27685546875,
+      -1484.0478515625
+    ],
+    "max": [
+      5372.056640625,
+      8004.1923828125,
+      2541.051025390625
+    ],
+    "center": [
+      -1867.79052734375,
+      1310.457763671875,
+      528.5015869140625
+    ],
+    "radius": 8178.45174236882
   }
 }
