@@ -38,8 +38,27 @@ fi
 echo "Building data files..."
 echo "Generating build-info and building data files..."
 # Generate build-info (commit) for cache-busting in builds
+echo "Node version: $(node -v 2>/dev/null || echo 'node not found')"
+echo "Python version: $(python -V 2>&1 || echo 'python not found')"
 node build-info.js
+
+if [ -f public/build-info.json ]; then
+    echo "public/build-info.json contents:"
+    cat public/build-info.json
+else
+    echo "ERROR: public/build-info.json not found after running build-info.js"
+    exit 1
+fi
+
 python data/build_data.py --db data/static.db --out public/data
+
+if [ -f public/data/manifest.json ]; then
+    echo "public/data/manifest.json contents:"
+    cat public/data/manifest.json
+else
+    echo "ERROR: public/data/manifest.json not found after building data"
+    exit 1
+fi
 
 echo "Copying source files to public directory..."
 cp -r src public/
