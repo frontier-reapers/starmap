@@ -1600,6 +1600,27 @@ function ensureRouteTableInViewport(element) {
   }
   debugLog("main: starting animation loop");
   animate();
+
+  // Keyboard shortcut: Ctrl+Shift+D or Ctrl+Alt+D toggles debug panel
+  window.addEventListener("keydown", (ev) => {
+    // Ignore if typing in input or textarea
+    const tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+    // Accept either Ctrl+Shift+D or Ctrl+Alt+D (also support Meta on mac)
+    const mod = ev.ctrlKey || ev.metaKey;
+    const altOrShift = ev.shiftKey || ev.altKey;
+    if (mod && altOrShift && ev.code === "KeyD") {
+      try {
+        // Prevent browser from handling shortcut (bookmark etc.) and stop propagation
+        if (ev.preventDefault) ev.preventDefault();
+        if (ev.stopPropagation) ev.stopPropagation();
+        toggleDebugPanel();
+      } catch (err) {
+        console.error("toggleDebugPanel failed (keyboard):", err);
+      }
+    }
+  }, { capture: true, passive: false });
 })().catch((err) => {
   debugLog("main() error:", err);
   console.error(err);

@@ -485,6 +485,24 @@ test.describe("Starmap Application", () => {
     await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 5000 });
     expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
 
+    // Keyboard shortcut: use Control+Alt+D (more reliable in CI than Ctrl+Shift+D)
+    await page.keyboard.down('Control');
+    await page.keyboard.down('Alt');
+    await page.keyboard.press('KeyD');
+    await page.keyboard.up('Alt');
+    await page.keyboard.up('Control');
+    await page.waitForSelector('#debug-log', { state: 'visible', timeout: 5000 });
+    expect(await page.locator('#debug-log').isVisible()).toBeTruthy();
+
+    // Toggle via keyboard again to hide
+    await page.keyboard.down('Control');
+    await page.keyboard.down('Alt');
+    await page.keyboard.press('KeyD');
+    await page.keyboard.up('Alt');
+    await page.keyboard.up('Control');
+    await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 5000 });
+    expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
+
     // Ensure clicking a sidebar control does NOT pass through to the map (no camera change)
     const canvas = page.locator('canvas').first();
     await expect(canvas).toBeVisible({ timeout: 10000 });
