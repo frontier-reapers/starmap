@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Starmap Application", () => {
   test.beforeEach(async ({ page }) => {
     // Start from the index page with debug mode enabled
-    await page.goto("http://localhost:3000/public/?debug=true");
+    await page.goto("http://localhost:3000/?debug=true");
   });
 
   test("should load the page with title", async ({ page }) => {
@@ -172,7 +172,7 @@ test.describe("Starmap Application", () => {
     page,
   }) => {
     // Navigate with focus parameter (using a common system name)
-    await page.goto("http://localhost:3000/public/?debug=true&focus=Jita");
+    await page.goto("http://localhost:3000/?debug=true&focus=Jita");
 
     const debugPanel = page.locator("#debug-log");
 
@@ -194,7 +194,7 @@ test.describe("Starmap Application", () => {
     page,
   }) => {
     // Navigate with focus parameter using system ID
-    await page.goto("http://localhost:3000/public/?debug=true&focus=30000142");
+    await page.goto("http://localhost:3000/?debug=true&focus=30000142");
 
     const debugPanel = page.locator("#debug-log");
 
@@ -310,7 +310,7 @@ test.describe("Starmap Application", () => {
   }) => {
     // Note: This test would need a valid route token to fully test
     // For now, we just verify the app doesn't crash with an invalid route
-    await page.goto("http://localhost:3000/public/?debug=true&route=invalid");
+    await page.goto("http://localhost:3000/?debug=true&route=invalid");
 
     await page.waitForTimeout(2000);
 
@@ -324,7 +324,7 @@ test.describe("Starmap Application", () => {
     const corruptedToken =
       "H4sIAAAAAAAAE-2NQQrCMAwEX7Mlz7iOJPoC6xHR5a0mTbv_5wi1x9NsZzjFPTUpBg6-RTKhuwrV0TdLq1Ryo8qYWOGFkTwc7E2vZPExf6q0r3xra14pDDAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${corruptedToken}`,
+      `http://localhost:3000/?debug=true&route=${corruptedToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -344,7 +344,7 @@ test.describe("Starmap Application", () => {
     // Valid token generated from test-encode.cjs
     const validToken = "H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${validToken}`,
+      `http://localhost:3000/?debug=true&route=${validToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -365,7 +365,7 @@ test.describe("Starmap Application", () => {
     const strymRouteToken =
       "H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${strymRouteToken}`,
+      `http://localhost:3000/?debug=true&route=${strymRouteToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -412,7 +412,7 @@ test.describe("Starmap Application", () => {
   test("should serve generated manifest with bounds and blob hashes", async ({ request }) => {
     // Fetch the canonical manifest and verify it either contains bounds+blobs
     // (new behavior) or that the positions blob exists and is non-empty.
-    const manifestUrl = "http://localhost:3000/public/data/manifest.json";
+    const manifestUrl = "http://localhost:3000/data/manifest.json";
     const resp = await request.get(manifestUrl);
     expect(resp.ok()).toBeTruthy();
     const manifest = await resp.json();
@@ -427,7 +427,7 @@ test.describe("Starmap Application", () => {
       expect(manifest.blobs["systems_positions.bin"].sha256).toMatch(/^[0-9a-f]{64}$/);
     } else {
       // Fallback: ensure the positions blob exists and has non-zero size
-      const positionsUrl = "http://localhost:3000/public/data/systems_positions.bin";
+      const positionsUrl = "http://localhost:3000/data/systems_positions.bin";
       const pResp = await request.get(positionsUrl);
       expect(pResp.ok()).toBeTruthy();
       const buf = await pResp.body();
@@ -437,7 +437,7 @@ test.describe("Starmap Application", () => {
 
   test("sidebar debug toggle button and keyboard shortcut work", async ({ page }) => {
     // Load without debug param so panel starts hidden
-    await page.goto("http://localhost:3000/public/");
+    await page.goto("http://localhost:3000/");
 
     const debugPanel = page.locator("#debug-log");
     const debugBtn = page.locator("#tool-debug");
@@ -523,7 +523,7 @@ test.describe("Starmap Application", () => {
   }) => {
     const validToken = "H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${validToken}`,
+      `http://localhost:3000/?debug=true&route=${validToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -570,7 +570,7 @@ test.describe("Starmap Application", () => {
   }) => {
     const validToken = "H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${validToken}`,
+      `http://localhost:3000/?debug=true&route=${validToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -615,7 +615,7 @@ test.describe("Starmap Application", () => {
   test("waypoint rows should have hover effect", async ({ page }) => {
     const validToken = "H4sIAAAAAAACCmPkYWDmeKZ0YIIDAKxgWgwKAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${validToken}`,
+      `http://localhost:3000/?debug=true&route=${validToken}`,
     );
 
     await page.waitForTimeout(3000);
@@ -633,7 +633,7 @@ test.describe("Starmap Application", () => {
   });
 
   test("should handle browser back/forward navigation", async ({ page }) => {
-    await page.goto(`http://localhost:3000/public/?debug=true`);
+    await page.goto(`http://localhost:3000/?debug=true`);
 
     // Wait for initial load and animation to start
     await page.waitForFunction(
@@ -656,7 +656,7 @@ test.describe("Starmap Application", () => {
     });
 
     // Navigate to a system via URL (O3H-1FN is in the dataset)
-    await page.goto(`http://localhost:3000/public/?debug=true&focus=O3H-1FN`);
+    await page.goto(`http://localhost:3000/?debug=true&focus=O3H-1FN`);
 
     // Wait for focus to be applied
     await page.waitForFunction(
@@ -738,7 +738,7 @@ test.describe("Starmap Application", () => {
   });
 
   test("should show persistent label for focused system", async ({ page }) => {
-    await page.goto(`http://localhost:3000/public/?debug=true&focus=O3H-1FN`);
+    await page.goto(`http://localhost:3000/?debug=true&focus=O3H-1FN`);
 
     // Wait for focus to be applied
     await page.waitForFunction(
@@ -784,7 +784,7 @@ test.describe("Starmap Application", () => {
     // Pick a station system ID from the binary asset and focus by ID
     const firstStationId = await page.evaluate(async () => {
       try {
-        const res = await fetch("/public/data/systems_with_stations.bin");
+        const res = await fetch("/data/systems_with_stations.bin");
         const buf = await res.arrayBuffer();
         const arr = new Uint32Array(buf);
         return arr.length > 0 ? arr[0] : null;
@@ -796,7 +796,7 @@ test.describe("Starmap Application", () => {
       throw new Error("No station system ID available for test");
 
     await page.goto(
-      `http://localhost:3000/public/?debug=true&focus=${firstStationId}`,
+      `http://localhost:3000/?debug=true&focus=${firstStationId}`,
     );
     // Wait for either a focus label to be created or a not-found message
     await page.waitForFunction(
@@ -825,7 +825,7 @@ test.describe("Starmap Application", () => {
     }
 
     // Focus on a black-hole system (ID 30000001) and check for black hole badge
-    await page.goto("http://localhost:3000/public/?debug=true&focus=30000001");
+    await page.goto("http://localhost:3000/?debug=true&focus=30000001");
     await page.waitForFunction(
       () => {
         const panel = document.getElementById("debug-log");
@@ -880,7 +880,7 @@ test.describe("Starmap Application", () => {
     });
     
     // Navigate with the injected script
-    await page.goto("http://localhost:3000/public/?debug=true");
+    await page.goto("http://localhost:3000/?debug=true");
 
     // Wait for the debug log to appear and show error messages
     const debugPanel = page.locator("#debug-log");
@@ -932,7 +932,7 @@ test.describe("Starmap Application", () => {
     const strymRouteToken =
       "H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA";
     await page.goto(
-      `http://localhost:3000/public/?debug=true&route=${strymRouteToken}`,
+      `http://localhost:3000/?debug=true&route=${strymRouteToken}`,
     );
 
     await page.waitForTimeout(3000);

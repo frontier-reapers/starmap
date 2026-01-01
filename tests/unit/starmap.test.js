@@ -213,20 +213,20 @@ describe("Focus system functionality", () => {
 
 describe("URL query parameter parsing", () => {
   it("should parse focus parameter from URL", () => {
-    const url = new URL("http://localhost:3000/public/?focus=Jita");
+    const url = new URL("http://localhost:3000/?focus=Jita");
     const params = new URLSearchParams(url.search);
     expect(params.get("focus")).toBe("Jita");
   });
 
   it("should parse debug parameter from URL", () => {
-    const url = new URL("http://localhost:3000/public/?debug=true");
+    const url = new URL("http://localhost:3000/?debug=true");
     const params = new URLSearchParams(url.search);
     expect(params.get("debug")).toBe("true");
   });
 
   it("should parse multiple parameters", () => {
     const url = new URL(
-      "http://localhost:3000/public/?debug=true&focus=E3Q-3SC",
+      "http://localhost:3000/?debug=true&focus=E3Q-3SC",
     );
     const params = new URLSearchParams(url.search);
     expect(params.get("debug")).toBe("true");

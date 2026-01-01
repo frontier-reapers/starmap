@@ -18,7 +18,6 @@ const DEBUG_ENABLED = (() => {
 })();
 
 function _makeDebugPanel() {
-  if (!DEBUG_ENABLED) return null;
   try {
     let panel = document.getElementById("debug-log");
     if (!panel) {
@@ -33,10 +32,60 @@ function _makeDebugPanel() {
       panel.style.color = "#0f0";
       panel.style.fontSize = "11px";
       panel.style.padding = "6px";
+      panel.style.minWidth = "220px";
+      panel.style.minHeight = "80px";
+      panel.style.border = "1px solid rgba(255,140,60,0.2)";
       panel.style.zIndex = 99999;
       panel.style.whiteSpace = "pre-wrap";
+      panel.setAttribute("role", "log");
+      panel.setAttribute("aria-live", "polite");
+      // Add a small visually-friendly header so the panel is obvious when shown
+      const hdr = document.createElement("div");
+      hdr.className = "debug-header";
+      hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
+      hdr.style.fontSize = "12px";
+      hdr.style.fontWeight = "600";
+      hdr.style.marginBottom = "6px";
+      hdr.style.color = "#ffdca3";
+      panel.appendChild(hdr);
       document.body.appendChild(panel);
+    } else {
+      // If an inline fallback created the panel before the module loaded, remove
+      // the placeholder text and ensure the module header is present so we can
+      // take over cleanly.
+      try {
+        // Remove any initial text nodes left by the inline fallback
+        for (const node of Array.from(panel.childNodes)) {
+          if (
+            node.nodeType === Node.TEXT_NODE &&
+            node.textContent &&
+            node.textContent.includes("Debug (fallback)")
+          ) {
+            panel.removeChild(node);
+          }
+        }
+        // Ensure header exists
+        if (!panel.querySelector(".debug-header")) {
+          const hdr = document.createElement("div");
+          hdr.className = "debug-header";
+          hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
+          hdr.style.fontSize = "12px";
+          hdr.style.fontWeight = "600";
+          hdr.style.marginBottom = "6px";
+          hdr.style.color = "#ffdca3";
+          panel.insertBefore(hdr, panel.firstChild);
+        }
+      } catch (e) {
+        /* best-effort cleanup; ignore errors */
+      }
     }
+
+    // Control visibility: prefer the runtime-visible flag so user toggles override
+    // the URL `?debug=true` parameter. DEBUG_VISIBLE is initialized from the
+    // URL but can be changed via the button/keyboard.
+    const visible = Boolean(DEBUG_VISIBLE);
+    panel.style.display = visible ? "block" : "none";
+    panel.setAttribute("aria-hidden", visible ? "false" : "true");
     return panel;
   } catch {
     return null;
