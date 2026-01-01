@@ -72,11 +72,13 @@ starmap/
 
 ### Development
 
-1. **Generate binary data** from SQLite database:
+1. **Generate build artifacts and binary data** from SQLite database (recommended):
    ```bash
-   npm run build:data
+   npm run build
+   # or to only build data and pass a release label explicitly:
+   npm run build:data -- --release e6c4
    # or manually:
-   python data/build_data.py --db data/static.db --out public/data
+   python data/build_data.py --db data/static.db --out public/data --release e6c4
    ```
 
 2. **Start development server:**
