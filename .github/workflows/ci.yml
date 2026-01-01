@@ -24,11 +24,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Download built public assets
-        uses: actions/download-artifact@v4
-        with:
-          name: built-public
-          path: .
+      # The previous workflow attempted to download a "built-public" artifact here.
+      # That artifact is produced later in the workflow (in `test-integration`) and
+      # may not exist for this job, which caused intermittent failures like
+      # "Artifact not found for name: built-public". These unit tests do not
+      # require the built public artifacts, so remove the download step.
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
