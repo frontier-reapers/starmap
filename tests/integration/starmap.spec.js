@@ -463,41 +463,22 @@ test.describe("Starmap Application", () => {
     await page.waitForSelector('#debug-log', { state: 'visible', timeout: 5000 });
     await expect(page.locator('#debug-log')).toBeVisible();
 
+    // Ensure the inline fallback text ("Debug (fallback)") is removed when
+    // the module takes over and that the module's header exists.
+    await page.waitForFunction(() => {
+      const p = document.getElementById('debug-log');
+      if (!p) return false;
+      const hasHeader = !!p.querySelector('.debug-header');
+      const hasFallbackText = Array.from(p.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent && n.textContent.includes('Debug (fallback)'));
+      return hasHeader && !hasFallbackText;
+    }, { timeout: 2000 });
+    expect(await page.locator('#debug-log .debug-header').count()).toBeGreaterThan(0);
+
     // Hide using a direct programmatic toggle to avoid flaky duplicate-handler
     // behavior in some headless environments.
     await page.evaluate(() => window.toggleDebugPanel && window.toggleDebugPanel());
     await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 5000 });
     expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
-
-      // Programmatically invoke the same toggle to reliably exercise the handler
-      // Diagnostic: check existence and computed style before invoking
-      const pre = await page.evaluate(() => {
-        return {
-          hasToggle: typeof window.toggleDebugPanel,
-          preDisplay: document.getElementById('debug-log') ? window.getComputedStyle(document.getElementById('debug-log')).display : null,
-        };
-      });
-      console.log('PRE INVOKE TOGGLE:', pre);
-      const invokeResult = await page.evaluate(() => {
-        try {
-          if (window.toggleDebugPanel) {
-            window.toggleDebugPanel();
-            return { invoked: true };
-          }
-          return { invoked: false };
-        } catch (err) {
-          return { invoked: false, error: String(err) };
-        }
-      });
-      console.log('INVOKE RESULT:', invokeResult);
-      const post = await page.evaluate(() => {
-        return {
-          postDisplay: document.getElementById('debug-log') ? window.getComputedStyle(document.getElementById('debug-log')).display : null,
-        };
-      });
-      console.log('POST INVOKE TOGGLE:', post);
-      await page.waitForSelector('#debug-log', { state: 'visible', timeout: 5000 });
-      await expect(page.locator('#debug-log')).toBeVisible();
 
     // Toggle off again programmatically
     await page.evaluate(() => window.toggleDebugPanel && window.toggleDebugPanel());

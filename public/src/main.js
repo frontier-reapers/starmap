@@ -236,16 +236,25 @@ function makeGlowSprite(color = 0xffaa00, size = 128) {
 }
 
 // --- Tiny helper to load binary files into typed arrays ----------------------
-async function fetchArrayBuffer(path) {
-  debugLog("fetchArrayBuffer:", path);
-  const res = await fetch(path);
-  debugLog("fetch response:", path, { ok: res.ok, status: res.status });
-  if (!res.ok)
-    throw new Error("Failed to fetch " + path + " (status=" + res.status + ")");
-  const buf = await res.arrayBuffer();
-  debugLog("fetched bytes:", path, buf.byteLength);
-  return buf;
-}
+// Guarded assignment to avoid multiple declarations across included copies
+// of this script in some deployments.
+const fetchArrayBuffer = (function () {
+  if (typeof window !== 'undefined' && typeof window.fetchArrayBuffer === 'function') {
+    return window.fetchArrayBuffer;
+  }
+  const fn = async function fetchArrayBuffer(path) {
+    debugLog("fetchArrayBuffer:", path);
+    const res = await fetch(path);
+    debugLog("fetch response:", path, { ok: res.ok, status: res.status });
+    if (!res.ok)
+      throw new Error("Failed to fetch " + path + " (status=" + res.status + ")");
+    const buf = await res.arrayBuffer();
+    debugLog("fetched bytes:", path, buf.byteLength);
+    return buf;
+  };
+  try { if (typeof window !== 'undefined') window.fetchArrayBuffer = fn; } catch (e) {}
+  return fn;
+})();
 
 async function fetchJsonSafe(path, label = "json") {
   debugLog("fetchJsonSafe:", path);
