@@ -115,6 +115,9 @@ def main():
     ap.add_argument("--jumps-table")
     ap.add_argument("--jump-from-col")
     ap.add_argument("--jump-to-col")
+    ap.add_argument("--black-holes-csv", help="CSV file with one or more system IDs (one per line or comma-separated) for black holes")
+    ap.add_argument("--black-holes-table", help="SQLite table name that contains black hole system IDs")
+    ap.add_argument("--black-holes-col", help="Column name in --black-holes-table containing the system ID (defaults to detected column)")
     ap.add_argument("--release", help="Data release label (e.g., e6c4)")
     args = ap.parse_args()
 
@@ -189,7 +192,7 @@ def main():
                 if r["s"] is not None and r["t"] is not None:
                     jumps.append((int(r["s"]), int(r["t"])))
 
-    con.close()
+    # We'll close the DB connection after optionally reading black holes from a table
 
     # Build set of valid system IDs for jump filtering
     valid_system_ids = {sid for sid, _, _, _, _ in systems}
@@ -210,8 +213,43 @@ def main():
         if sid in station_systems:
             station_ids.append(sid)
 
-    # Black hole systems (hardcoded IDs)
-    black_hole_ids = array.array('I', [30000001, 30000002, 30000003])
+    # Black hole systems (can be provided via CSV or SQLite table; fall back to hardcoded IDs)
+    black_hole_ids_values = []
+    if args.black_holes_csv:
+        csv_path = Path(args.black_holes_csv)
+        if not csv_path.exists():
+            print(f"Error: black holes CSV not found: {csv_path}", file=sys.stderr)
+            raise SystemExit(1)
+        try:
+            text = csv_path.read_text()
+            # split by lines and commas, tolerate whitespace
+            parts = [p.strip() for ln in text.splitlines() for p in ln.split(',')]
+            for p in parts:
+                if not p:
+                    continue
+                black_hole_ids_values.append(int(p))
+        except Exception as e:
+            print(f"Error parsing black holes CSV: {e}", file=sys.stderr)
+            raise SystemExit(1)
+    elif args.black_holes_table:
+        try:
+            # need an active DB cursor; use the existing connection
+            bh_table = args.black_holes_table
+            bh_cols = get_cols(cur, bh_table)
+            bh_col = args.black_holes_col or find_col(bh_cols, ["solarSystemId","system_id","id","solar_system_id"]) or bh_cols[0]
+            cur.execute(f"SELECT DISTINCT {bh_col} FROM {bh_table} WHERE {bh_col} IS NOT NULL")
+            for r in cur.fetchall():
+                black_hole_ids_values.append(int(r[0]))
+        except Exception as e:
+            print(f"Error reading black holes table '{args.black_holes_table}': {e}", file=sys.stderr)
+            raise SystemExit(1)
+    else:
+        black_hole_ids_values = [30000001, 30000002, 30000003]
+
+    # We can safely close DB connection now
+    con.close()
+
+    black_hole_ids = array.array('I', black_hole_ids_values)
 
     # Validate built data before writing to disk
     issues = validate_assets(ids, positions, jumps, station_ids, black_hole_ids, valid_system_ids)

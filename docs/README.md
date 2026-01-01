@@ -188,9 +188,19 @@ Supported: Vercel, Netlify, GitHub Pages (with Actions), AWS S3, Azure Static We
 
 ## Data Format
 
-### Input: SQLite Database (`data/static.db`)
+### Input: SQLite Database (`data/static.db`) 
 - **SolarSystems** table with columns: `solarSystemId`, `name`, `centerX`, `centerY`, `centerZ` (positions in meters)
 - **Jumps** table with columns for system-to-system connections
+
+### Data Builder CLI options (black holes)
+- `--black-holes-csv <path>` — Provide a CSV file containing one or more system IDs (one per line or comma-separated) that should be treated as black holes.
+- `--black-holes-table <table>` — Provide an SQLite table name containing black hole system IDs (the builder will try to auto-detect a suitable column such as `solarSystemId`, `id`, or `system_id`).
+- `--black-holes-col <column>` — (Optional) Explicit column name in the `--black-holes-table` to read IDs from.
+
+Behavior and acceptance:
+- If either `--black-holes-csv` or `--black-holes-table` is provided, the builder will read those IDs and validate that they exist in the systems table; the build fails with a clear diagnostic if any provided black hole ID is missing.
+- If no flags are provided the builder falls back to the historical default IDs `[30000001, 30000002, 30000003]`.
+- The generated `manifest.json` includes `counts.systems_black_holes` so consumers can show layer counts without scanning binaries.
 
 ### Output: Binary Files (`public/data/`)
 - **systems_positions.bin** - Float32Array of (x,y,z) coordinates in light-years with Rx(-90°) transform
