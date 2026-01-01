@@ -150,6 +150,19 @@ jobs:
             echo "Building data without explicit release label"
             npm run build:data
           fi
+
+      - name: Verify build artifacts
+        run: |
+          echo "build-info:"; cat public/build-info.json || true
+          echo "manifest:"; cat public/data/manifest.json || true
+          if [ ! -f public/build-info.json ]; then echo "ERROR: public/build-info.json missing"; exit 1; fi
+          if [ -n "$RELEASE_TAG" ]; then
+            manifest_release=$(jq -r '.release // empty' public/data/manifest.json)
+            if [ "$manifest_release" != "$RELEASE_TAG" ]; then echo "ERROR: manifest.release ($manifest_release) != RELEASE_TAG ($RELEASE_TAG)"; exit 1; fi
+            echo "Manifest release matches: $manifest_release"
+          else
+            echo "No RELEASE_TAG available; skipping manifest release check"
+          fi
       
       - name: Run integration tests
         run: npm run test:integration
