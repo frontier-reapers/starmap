@@ -111,20 +111,24 @@ jobs:
         run: |
           # Get the latest release info from the evefrontier_datasets repository
           RELEASE_INFO=$(curl -s https://api.github.com/repos/Scetrov/evefrontier_datasets/releases/latest)
-          
-          # Extract the download URL for static_data.db asset (note: it's static_data.db not static.db)
-          DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name == "static_data.db") | .browser_download_url')
-          
+
+          # Extract a release label (tag_name or name) for manifest metadata
+          RELEASE_TAG=$(echo "$RELEASE_INFO" | jq -r '.tag_name // .name // empty')
+          echo "Detected release: $RELEASE_TAG"
+
+          # Extract the download URL for static_data.db asset (supports static.db or static_data.db)
+          DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | test("static(_data)?\\.db")) | .browser_download_url' | head -1)
+
           if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
             echo "Error: Could not find static_data.db in latest release"
             echo "Available assets:"
             echo "$RELEASE_INFO" | jq -r '.assets[].name'
             exit 1
           fi
-          
+
           echo "Downloading static_data.db from: $DOWNLOAD_URL"
           curl -L -o data/static.db "$DOWNLOAD_URL"
-          
+
           # Verify the file was downloaded
           if [ -f data/static.db ]; then
             FILE_SIZE=$(stat -c%s data/static.db 2>/dev/null || stat -f%z data/static.db)
@@ -133,9 +137,19 @@ jobs:
             echo "Error: Failed to download static.db"
             exit 1
           fi
+
+          # Export release tag to the job environment for subsequent build step
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
       
       - name: Generate binary data from SQLite
-        run: npm run build:data
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            echo "Building data with release label: $RELEASE_TAG"
+            npm run build:data -- --release "$RELEASE_TAG"
+          else
+            echo "Building data without explicit release label"
+            npm run build:data
+          fi
       
       - name: Run integration tests
         run: npm run test:integration

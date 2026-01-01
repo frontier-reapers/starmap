@@ -36,6 +36,9 @@ else
 fi
 
 echo "Building data files..."
+echo "Generating build-info and building data files..."
+# Generate build-info (commit) for cache-busting in builds
+node build-info.js
 python data/build_data.py --db data/static.db --out public/data
 
 echo "Copying source files to public directory..."

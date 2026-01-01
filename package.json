@@ -14,6 +14,7 @@
     "test:all": "npm run test:unit && npm run test:integration",
     "test:watch": "vitest tests/unit",
     "build:data": "python data/build_data.py --db data/static.db --out public/data",
+    "build": "node build-info.js && npm run build:data && cp -r src public/",
     "docker:build:web": "docker build -f docker/Dockerfile.web -t starmap-web .",
     "docker:build:data": "docker build -f docker/Dockerfile.data -t starmap-data .",
     "docker:run:web": "docker run -p 8080:80 starmap-web",
