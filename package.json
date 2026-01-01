@@ -4,7 +4,7 @@
   "description": "3D star map visualization using three.js",
   "type": "module",
   "scripts": {
-    "dev": "node build-info.js && npx http-server . -p 3000 -c-1 -o /public/",
+    "dev": "node build-info.js && npx http-server public -p 3000 -c-1",
     "prebuild": "node build-info.js",
     "test": "npm run test:unit:js && npm run test:unit:py",
     "test:unit": "npm run test:unit:js && npm run test:unit:py",

@@ -91,7 +91,7 @@ debugLog("module loaded", {
   ua: navigator.userAgent,
 });
 
-const DATA_BASE = "./data/";
+const DATA_BASE = "/data/";
 const VERSION_KEY = "starmap_data_version_v1"; // bump if data format changes
 
 // Cache-bust parameter (will be populated after loading build-info)
@@ -100,7 +100,7 @@ let cacheVersion = "";
 // Load build info for cache-busting
 async function loadBuildInfo() {
   try {
-    const response = await fetch("./build-info.json", { cache: "no-store" });
+    const response = await fetch("/build-info.json", { cache: "no-store" });
     if (!response.ok) {
       debugLog("Could not load build-info.json: HTTP", response.status);
       return;
@@ -131,7 +131,6 @@ async function loadBuildInfo() {
 
     cacheVersion = buildInfo.commit;
     debugLog("Build info loaded", buildInfo);
-    console.log("Cache buster version:", cacheVersion);
   } catch (e) {
     debugLog("Could not load build-info.json:", e);
     console.error("Build info fetch error:", e);
@@ -141,9 +140,6 @@ async function loadBuildInfo() {
 // Helper to add cache-bust param to URLs
 function cacheBustUrl(path) {
   const result = cacheVersion ? path + "?v=" + cacheVersion : path;
-  if (cacheVersion) {
-    console.log("Cache busting", path, "->", result);
-  }
   return result;
 }
 

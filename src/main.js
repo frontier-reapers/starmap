@@ -100,7 +100,6 @@ function showDebugPanel() {
   debugLog("debug panel: shown");
   const btn = document.getElementById("tool-debug");
   if (btn) btn.setAttribute("aria-pressed", "true");
-  console.log("showDebugPanel: invoked; panel exists=", !!p);
 }
 
 function hideDebugPanel() {
@@ -110,7 +109,6 @@ function hideDebugPanel() {
   debugLog("debug panel: hidden");
   const btn = document.getElementById("tool-debug");
   if (btn) btn.setAttribute("aria-pressed", "false");
-  console.log("hideDebugPanel: invoked; panel exists=", !!p);
 }
 
 function toggleDebugPanel() {
@@ -202,7 +200,6 @@ try {
     // duplicate click handling between the inline handler and this listener.
     try {
       if (dbgBtn.getAttribute && dbgBtn.getAttribute("onclick")) {
-        console.log("Removing inline onclick fallback from #tool-debug to avoid double-handling");
         try {
           dbgBtn.removeAttribute("onclick");
         } catch (err) {}
@@ -216,14 +213,12 @@ try {
     }
 
     dbgBtn.addEventListener("click", (ev) => {
-      console.log("tool-debug clicked");
       ev.preventDefault();
       // Avoid double-handling clicks when an inline onclick fallback already
       // performed the toggle (inline handlers run before addEventListener). If
       // the inline handler set a recent flag, skip handling here.
       try {
         if (window.__lastDebugClick && Date.now() - window.__lastDebugClick < 250) {
-          console.log("skipping duplicate debug click (handled by inline fallback)");
           // Clear the marker so future clicks are handled normally
           window.__lastDebugClick = null;
           return;
@@ -271,12 +266,9 @@ try {
     // Ignore if typing in input or textarea
     const tag = (ev.target && ev.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA") return;
-    // Log key events for diagnostics in test runs
-    console.log("keydown event:", { ctrl: ev.ctrlKey, shift: ev.shiftKey, code: ev.code, target: tag });
     if (ev.ctrlKey && ev.shiftKey && ev.code === "KeyD") {
       ev.preventDefault();
       try {
-        console.log("keyboard shortcut detected: toggling debug panel");
         toggleDebugPanel();
       } catch (err) {
         console.error("toggleDebugPanel failed (keyboard):", err);
@@ -292,7 +284,7 @@ debugLog("module loaded", {
   ua: navigator.userAgent,
 });
 
-const DATA_BASE = "./data/";
+const DATA_BASE = "/data/";
 const VERSION_KEY = "starmap_data_version_v1"; // bump if data format changes
 
 // Cache-bust parameter (will be populated after loading build-info)
@@ -301,7 +293,7 @@ let cacheVersion = "";
 // Load build info for cache-busting
 async function loadBuildInfo() {
   try {
-    const response = await fetch("./build-info.json", { cache: "no-store" });
+    const response = await fetch("/build-info.json", { cache: "no-store" });
     if (!response.ok) {
       debugLog("Could not load build-info.json: HTTP", response.status);
       return;
@@ -332,7 +324,6 @@ async function loadBuildInfo() {
 
     cacheVersion = buildInfo.commit;
     debugLog("Build info loaded", buildInfo);
-    console.log("Cache buster version:", cacheVersion);
   } catch (e) {
     debugLog("Could not load build-info.json:", e);
     console.error("Build info fetch error:", e);
@@ -342,9 +333,6 @@ async function loadBuildInfo() {
 // Helper to add cache-bust param to URLs
 function cacheBustUrl(path) {
   const result = cacheVersion ? path + "?v=" + cacheVersion : path;
-  if (cacheVersion) {
-    console.log("Cache busting", path, "->", result);
-  }
   return result;
 }
 
