@@ -35,20 +35,28 @@ test.describe("Starmap Application", () => {
     // Click the debug toggle to show the panel
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    // Wait for module initialization (ensures inline onclick fallback was removed)
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
 
-    // Check that it contains expected log messages
-    const content = await debugPanel.textContent();
-    expect(content).toContain("module loaded");
-    expect(content).toContain("main: starting");
+    // Wait for the module to write logs into the panel
+    await page.waitForFunction(() => {
+      const p = document.getElementById('debug-log');
+      return p && p.textContent && p.textContent.includes('module loaded');
+    }, { timeout: 10000 });
+    await page.waitForFunction(() => {
+      const p = document.getElementById('debug-log');
+      return p && p.textContent && p.textContent.includes('main: starting');
+    }, { timeout: 10000 });
   });
 
   test("should load binary data successfully", async ({ page }) => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
@@ -71,6 +79,7 @@ test.describe("Starmap Application", () => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -133,6 +142,7 @@ test.describe("Starmap Application", () => {
   test("should load station systems data", async ({ page }) => {
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -175,6 +185,7 @@ test.describe("Starmap Application", () => {
     await page.waitForTimeout(2000);
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
@@ -989,6 +1000,7 @@ test.describe("Starmap Application", () => {
     // Open debug panel to read logs
     const debugBtn = page.locator("#tool-debug");
     await expect(debugBtn).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
