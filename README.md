@@ -40,6 +40,7 @@ starmap/
 ## VS Code Tasks
 
 Press `Ctrl+Shift+P` → "Tasks: Run Task" to access:
+
 - Start Dev Server
 - Build Data from SQLite
 - Run Tests (Unit/Integration/All)
@@ -73,6 +74,7 @@ See [Cloudflare Pages Deployment Guide](./docs/CLOUDFLARE_PAGES.md) for complete
 ### Other Platforms
 
 The application is a static site with a Python build step. Deploy to any platform that supports:
+
 - Python 3.11+ for build step
 - Static file hosting
 

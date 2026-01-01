@@ -19,12 +19,12 @@ http://localhost:3000/public/?route={bitpacked-token}
 Use the included `bitpacking.js` (Node.js) to encode routes:
 
 ```javascript
-const { encodeToBase64UrlGzip } = require('./src/bitpacking.js');
+const { encodeToBase64UrlGzip } = require("./src/bitpacking.js");
 
 const waypoints = [
-  { Id: 30000142, Type: 1 },  // Jita (Jump)
-  { Id: 30002187, Type: 0 },  // Start
-  { Id: 30000144, Type: 1 },  // Another jump
+  { Id: 30000142, Type: 1 }, // Jita (Jump)
+  { Id: 30002187, Type: 0 }, // Start
+  { Id: 30000144, Type: 1 }, // Another jump
 ];
 
 const token = encodeToBase64UrlGzip(waypoints);
@@ -58,7 +58,7 @@ console.log(`Route URL: ?route=${token}`);
 - **Route start label** (blue glassmorphism) - Shows 🚀 START marker
   - Automatically created for first waypoint in route
   - Blue gradient styling with cyan border
-- **Route end label** (blue glassmorphism) - Shows 🏁 END marker  
+- **Route end label** (blue glassmorphism) - Shows 🏁 END marker
   - Automatically created for last waypoint in route
   - Distinct from start if route has multiple waypoints
 
@@ -100,6 +100,7 @@ console.log(`Route URL: ?route=${token}`);
 ### Position Persistence
 
 The table position is saved to `localStorage.routeTablePosition` as JSON:
+
 ```json
 {
   "top": 10,
@@ -129,6 +130,7 @@ The route token uses bit-tight encoding optimized for EVE Online system IDs:
 ## Browser Compatibility
 
 Requires modern browsers with:
+
 - **DecompressionStream API** (Chrome 80+, Firefox 113+, Safari 16.4+)
 - ES6 modules
 - async/await
@@ -136,11 +138,13 @@ Requires modern browsers with:
 ## Examples
 
 ### Single waypoint route
+
 ```
 ?route={compressed-token}
 ```
 
 ### Combined with other features
+
 ```
 ?debug=true&focus=Jita&route={token}
 ```
@@ -157,17 +161,20 @@ The route table will appear even when focused on a specific system.
 ### Common Errors
 
 **"Route token contains corrupted gzip data"**
+
 - The token may be incomplete or truncated when copying
 - Ensure the entire token is copied from start to finish
 - Check for missing characters at the end
 - Try regenerating the token if possible
 
 **"Route token has invalid gzip header"**
+
 - Token may be malformed or not actually gzipped
 - Verify the token was generated with the correct encoding function
 - Check for URL encoding issues (spaces, special chars)
 
 **"Browser does not support route decompression"**
+
 - Update to a modern browser:
   - Chrome 80+ (released Feb 2020)
   - Firefox 113+ (released May 2023)
@@ -190,11 +197,13 @@ Then visit the printed URL to verify it loads correctly.
 ### Testing Routes Locally
 
 1. Create a test route with `bitpacking.js`:
+
    ```bash
    node -e "const bp = require('./src/bitpacking.js'); console.log(bp.encodeToBase64UrlGzip([{Id:30000142,Type:1},{Id:30002187,Type:0}]))"
    ```
 
 2. Add to URL:
+
    ```
    http://localhost:3000/public/?debug=true&route={output}
    ```
@@ -213,6 +222,7 @@ Then visit the printed URL to verify it loads correctly.
 ## Future Enhancements
 
 Potential improvements:
+
 - Click waypoints to focus camera
 - Hover waypoints to highlight route segment
 - Edit/reorder waypoints

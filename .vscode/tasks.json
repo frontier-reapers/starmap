@@ -68,12 +68,7 @@
       "label": "Run Python Tests",
       "type": "shell",
       "command": "${command:python.interpreterPath}",
-      "args": [
-        "-m",
-        "pytest",
-        "tests/unit/test_build_data.py",
-        "-v"
-      ],
+      "args": ["-m", "pytest", "tests/unit/test_build_data.py", "-v"],
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",

@@ -109,7 +109,7 @@ class BitReader {
         this._cur = this._buf[this._i++];
         this._bits = 8;
       }
-      const msb = (this._cur & 0x80) ? 1 : 0;
+      const msb = this._cur & 0x80 ? 1 : 0;
       v = (v << 1) | msb;
       this._cur = (this._cur << 1) & 0xff;
       this._bits--;
@@ -121,7 +121,11 @@ class BitReader {
 // ======== Helpers: base64url ========
 
 function toBase64Url(buf) {
-  return buf.toString("base64").replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return buf
+    .toString("base64")
+    .replace(/=+$/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
 function fromBase64Url(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/");

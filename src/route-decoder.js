@@ -20,12 +20,18 @@ export async function decodeRouteToken(token, typeWidth = 2) {
     return decodeRawBitPacked(raw, typeWidth);
   } catch (err) {
     // Provide more specific error messages
-    if (err.message && err.message.includes('invalid code lengths')) {
-      throw new Error('Route token contains corrupted gzip data. The token may be incomplete or damaged.');
-    } else if (err.message && err.message.includes('incorrect header check')) {
-      throw new Error('Route token has invalid gzip header. Ensure the token is copied completely.');
-    } else if (err.message && err.message.includes('DecompressionStream')) {
-      throw new Error('Browser does not support route decompression. Please use a modern browser (Chrome 80+, Firefox 113+, Safari 16.4+).');
+    if (err.message && err.message.includes("invalid code lengths")) {
+      throw new Error(
+        "Route token contains corrupted gzip data. The token may be incomplete or damaged.",
+      );
+    } else if (err.message && err.message.includes("incorrect header check")) {
+      throw new Error(
+        "Route token has invalid gzip header. Ensure the token is copied completely.",
+      );
+    } else if (err.message && err.message.includes("DecompressionStream")) {
+      throw new Error(
+        "Browser does not support route decompression. Please use a modern browser (Chrome 80+, Firefox 113+, Safari 16.4+).",
+      );
     }
     // Re-throw with original message if we don't recognize it
     throw new Error(`Failed to decode route token: ${err.message}`);
@@ -35,14 +41,15 @@ export async function decodeRouteToken(token, typeWidth = 2) {
 // ======== Bit-tight decoding ========
 
 function decodeRawBitPacked(buf, typeWidth = 2) {
-  if (buf.length < 4) throw new Error('Route data too short');
-  
+  if (buf.length < 4) throw new Error("Route data too short");
+
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  
-  if (buf[0] !== 1) throw new Error('Unsupported route version');
+
+  if (buf[0] !== 1) throw new Error("Unsupported route version");
   const k = buf[1];
-  if (k <= 0 || k > 30) throw new Error('Invalid route bit width');
-  if (typeWidth <= 0 || typeWidth > 8) throw new Error('Invalid type bit width');
+  if (k <= 0 || k > 30) throw new Error("Invalid route bit width");
+  if (typeWidth <= 0 || typeWidth > 8)
+    throw new Error("Invalid type bit width");
 
   const count = view.getUint16(2, false); // big-endian
   const br = new BitReader(buf.subarray(4));
@@ -65,16 +72,17 @@ class BitReader {
     this._cur = 0;
     this._bits = 0; // bits remaining in _cur (0..8)
   }
-  
+
   readBits(bitCount) {
     let v = 0 >>> 0;
     for (let i = 0; i < bitCount; i++) {
       if (this._bits === 0) {
-        if (this._i >= this._buf.length) throw new Error('Unexpected EOF in route data');
+        if (this._i >= this._buf.length)
+          throw new Error("Unexpected EOF in route data");
         this._cur = this._buf[this._i++];
         this._bits = 8;
       }
-      const msb = (this._cur & 0x80) ? 1 : 0;
+      const msb = this._cur & 0x80 ? 1 : 0;
       v = (v << 1) | msb;
       this._cur = (this._cur << 1) & 0xff;
       this._bits--;
@@ -86,11 +94,11 @@ class BitReader {
 // ======== Helpers: base64url ========
 
 function fromBase64Url(s) {
-  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
   const pad = s.length % 4;
-  if (pad === 2) s += '==';
-  else if (pad === 3) s += '=';
-  
+  if (pad === 2) s += "==";
+  else if (pad === 3) s += "=";
+
   // Decode base64 to binary string
   const binaryString = atob(s);
   const len = binaryString.length;
@@ -110,27 +118,29 @@ function fromBase64Url(s) {
  */
 async function gunzip(gzData) {
   // Use DecompressionStream API (available in modern browsers)
-  if (typeof DecompressionStream === 'undefined') {
-    throw new Error('DecompressionStream not supported in this browser');
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error("DecompressionStream not supported in this browser");
   }
-  
+
   const stream = new ReadableStream({
     start(controller) {
       controller.enqueue(gzData);
       controller.close();
-    }
+    },
   });
-  
-  const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+
+  const decompressedStream = stream.pipeThrough(
+    new DecompressionStream("gzip"),
+  );
   const reader = decompressedStream.getReader();
   const chunks = [];
-  
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     chunks.push(value);
   }
-  
+
   // Concatenate all chunks
   const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
   const result = new Uint8Array(totalLength);
@@ -139,20 +149,20 @@ async function gunzip(gzData) {
     result.set(chunk, offset);
     offset += chunk.length;
   }
-  
+
   return result;
 }
 
 // ======== Waypoint type labels ========
 
 export const WAYPOINT_TYPES = {
-  0: 'Start',
-  1: 'Jump',
-  2: 'NPC Gate',
-  3: 'Smart Gate',
-  4: 'Set Destination'
+  0: "Start",
+  1: "Jump",
+  2: "NPC Gate",
+  3: "Smart Gate",
+  4: "Set Destination",
 };
 
 export function getWaypointTypeLabel(type) {
-  return WAYPOINT_TYPES[type] || 'Unknown';
+  return WAYPOINT_TYPES[type] || "Unknown";
 }

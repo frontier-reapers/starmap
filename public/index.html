@@ -1,453 +1,521 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <title>Reapers Frontier Map</title>
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <style>
-    @font-face {
-      font-family: 'Disket Mono';
-      src: url('./fonts/Disket-Mono-Bold.ttf') format('truetype');
-      font-weight: bold;
-      font-style: normal;
-    }
-    
-    html, body, #app { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background:#000; color:#ddd; font-family: system-ui, sans-serif; }
-    #overlay {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      padding: 8px 12px;
-      font-family: 'Disket Mono', monospace;
-      font-size: 12px;
-      color: #ffe0d4;
-      letter-spacing: 0.5px;
-      text-transform: lowercase;
-      background: none;
-      border: none;
-      box-shadow: none;
-      opacity: 0.65;
-      pointer-events: none;
-    }
-    
-    .label {
-      font-family: 'Disket Mono', monospace;
-      font-size: 18px;
-      font-weight: bold;
-      color: #fff;
-      
-      /* Orange-tinted glassmorphism */
-      background: linear-gradient(
-        135deg,
-        rgba(255, 71, 0, 0.15) 0%,
-        rgba(255, 120, 30, 0.1) 50%,
-        rgba(255, 71, 0, 0.08) 100%
-      );
-      
-      /* Enhanced glass effect */
-      backdrop-filter: blur(12px) saturate(180%);
-      -webkit-backdrop-filter: blur(12px) saturate(180%);
-      
-      /* Subtle orange-tinted border */
-      border: 1px solid rgba(255, 140, 60, 0.3);
-      border-radius: 8px;
-      
-      /* Multi-layer shadows for depth */
-      box-shadow: 
-        0 4px 16px rgba(255, 71, 0, 0.2),
-        0 2px 8px rgba(255, 120, 30, 0.15),
-        inset 0 1px 1px rgba(255, 255, 255, 0.1),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.1);
-      
-      padding: 8px 16px;
-      pointer-events: none;
-      white-space: nowrap;
-      text-align: center;
-      
-      /* Keep labels responsive to camera movement (no laggy transitions) */
-      transition: none;
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Reapers Frontier Map</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      @font-face {
+        font-family: "Disket Mono";
+        src: url("./fonts/Disket-Mono-Bold.ttf") format("truetype");
+        font-weight: bold;
+        font-style: normal;
+      }
 
-    .label.hovered {
-      box-shadow: 
-        0 4px 16px rgba(255, 71, 0, 0.2),
-        0 2px 8px rgba(255, 120, 30, 0.15),
-        inset 0 1px 1px rgba(255, 255, 255, 0.1),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.1),
-        0 0 30px rgba(255, 140, 60, 0.6),
-        0 0 60px rgba(255, 100, 30, 0.4);
-      border-color: rgba(255, 140, 60, 0.6);
-    }
-    
-    canvas { display:block; }
+      html,
+      body,
+      #app {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        background: #000;
+        color: #ddd;
+        font-family: system-ui, sans-serif;
+      }
+      #overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 8px 12px;
+        font-family: "Disket Mono", monospace;
+        font-size: 12px;
+        color: #ffe0d4;
+        letter-spacing: 0.5px;
+        text-transform: lowercase;
+        background: none;
+        border: none;
+        box-shadow: none;
+        opacity: 0.65;
+        pointer-events: none;
+      }
 
-    /* Left tool panel */
-    #tool-panel {
-      position: fixed;
-      top: 50%;
-      left: 10px;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 10px;
-      background: rgba(8, 10, 14, 0.75);
-      border: 1px solid rgba(255, 186, 110, 0.18);
-      border-radius: 12px;
-      box-shadow:
-        0 8px 20px rgba(0, 0, 0, 0.45),
-        0 0 12px rgba(0, 210, 255, 0.08),
-        0 0 16px rgba(255, 170, 70, 0.08),
-        inset 0 1px 1px rgba(255, 255, 255, 0.06),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(12px) saturate(170%);
-      -webkit-backdrop-filter: blur(12px) saturate(170%);
-      z-index: 6;
-      pointer-events: auto;
-    }
+      .label {
+        font-family: "Disket Mono", monospace;
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
 
-    #tool-panel button {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), rgba(0,0,0,0.4));
-      color: #e9f2fb;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow:
-        0 4px 12px rgba(0,0,0,0.35),
-        inset 0 1px 1px rgba(255,255,255,0.08);
-      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-    }
+        /* Orange-tinted glassmorphism */
+        background: linear-gradient(
+          135deg,
+          rgba(255, 71, 0, 0.15) 0%,
+          rgba(255, 120, 30, 0.1) 50%,
+          rgba(255, 71, 0, 0.08) 100%
+        );
 
-    #tool-panel button:hover {
-      transform: translateY(-1px) scale(1.03);
-      border-color: rgba(0, 220, 255, 0.35);
-      box-shadow:
-        0 6px 14px rgba(0,0,0,0.4),
-        0 0 12px rgba(0, 210, 255, 0.18),
-        0 0 12px rgba(255, 170, 70, 0.18),
-        inset 0 1px 1px rgba(255,255,255,0.12);
-    }
+        /* Enhanced glass effect */
+        backdrop-filter: blur(12px) saturate(180%);
+        -webkit-backdrop-filter: blur(12px) saturate(180%);
 
-    #tool-panel button:active {
-      transform: translateY(0) scale(0.98);
-      box-shadow:
-        0 3px 8px rgba(0,0,0,0.45),
-        inset 0 1px 1px rgba(255,255,255,0.08);
-    }
+        /* Subtle orange-tinted border */
+        border: 1px solid rgba(255, 140, 60, 0.3);
+        border-radius: 8px;
 
-    /* Search panel */
-    #search-panel {
-      position: fixed;
-      top: 50%;
-      left: 70px;
-      transform: translateY(-50%);
-      width: 280px;
-      max-height: 70vh;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: rgba(8, 10, 14, 0.88);
-      border: 1px solid rgba(255, 186, 110, 0.16);
-      border-radius: 12px;
-      box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.45),
-        0 0 22px rgba(0, 210, 255, 0.08),
-        0 0 28px rgba(255, 170, 70, 0.08),
-        inset 0 1px 1px rgba(255, 255, 255, 0.06),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.10);
-      backdrop-filter: blur(12px) saturate(170%);
-      -webkit-backdrop-filter: blur(12px) saturate(170%);
-      z-index: 7;
-      pointer-events: auto;
-      opacity: 1;
-      transition: opacity 140ms ease, transform 140ms ease;
-    }
+        /* Multi-layer shadows for depth */
+        box-shadow:
+          0 4px 16px rgba(255, 71, 0, 0.2),
+          0 2px 8px rgba(255, 120, 30, 0.15),
+          inset 0 1px 1px rgba(255, 255, 255, 0.1),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1);
 
-    #search-panel.search-collapsed {
-      opacity: 0;
-      transform: translate(-10px, -50%);
-      pointer-events: none;
-    }
+        padding: 8px 16px;
+        pointer-events: none;
+        white-space: nowrap;
+        text-align: center;
 
-    #search-input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(15, 20, 28, 0.9);
-      color: #e9f2fb;
-      font-family: 'Disket Mono', monospace;
-      font-size: 13px;
-      outline: none;
-      box-sizing: border-box;
-      box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.08),
-        0 4px 12px rgba(0,0,0,0.35);
-      transition: border-color 120ms ease, box-shadow 120ms ease;
-    }
+        /* Keep labels responsive to camera movement (no laggy transitions) */
+        transition: none;
+      }
 
-    #search-input:focus {
-      border-color: rgba(0, 220, 255, 0.35);
-      box-shadow:
-        0 0 12px rgba(0, 210, 255, 0.18),
-        0 0 12px rgba(255, 170, 70, 0.18),
-        inset 0 1px 1px rgba(255,255,255,0.12);
-    }
+      .label.hovered {
+        box-shadow:
+          0 4px 16px rgba(255, 71, 0, 0.2),
+          0 2px 8px rgba(255, 120, 30, 0.15),
+          inset 0 1px 1px rgba(255, 255, 255, 0.1),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1),
+          0 0 30px rgba(255, 140, 60, 0.6),
+          0 0 60px rgba(255, 100, 30, 0.4);
+        border-color: rgba(255, 140, 60, 0.6);
+      }
 
-    #search-results {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      max-height: 50vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
+      canvas {
+        display: block;
+      }
 
-    #search-results li {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(20, 24, 30, 0.85);
-      color: #e9f2fb;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      transition: background 100ms ease, border-color 100ms ease, transform 100ms ease;
-    }
+      /* Left tool panel */
+      #tool-panel {
+        position: fixed;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background: rgba(8, 10, 14, 0.75);
+        border: 1px solid rgba(255, 186, 110, 0.18);
+        border-radius: 12px;
+        box-shadow:
+          0 8px 20px rgba(0, 0, 0, 0.45),
+          0 0 12px rgba(0, 210, 255, 0.08),
+          0 0 16px rgba(255, 170, 70, 0.08),
+          inset 0 1px 1px rgba(255, 255, 255, 0.06),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(12px) saturate(170%);
+        -webkit-backdrop-filter: blur(12px) saturate(170%);
+        z-index: 6;
+        pointer-events: auto;
+      }
 
-    #search-results li:hover {
-      background: rgba(0, 170, 255, 0.08);
-      border-color: rgba(0, 220, 255, 0.25);
-      transform: translateY(-1px);
-    }
+      #tool-panel button {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: radial-gradient(
+          circle at 30% 30%,
+          rgba(255, 255, 255, 0.08),
+          rgba(0, 0, 0, 0.4)
+        );
+        color: #e9f2fb;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow:
+          0 4px 12px rgba(0, 0, 0, 0.35),
+          inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        transition:
+          transform 120ms ease,
+          box-shadow 120ms ease,
+          border-color 120ms ease;
+      }
 
-    #search-results li .sid {
-      color: #8be3ff;
-      font-size: 12px;
-      opacity: 0.8;
-    }
-    
-    #route-table {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      max-width: 400px;
-      max-height: 80vh;
-      overflow-y: auto;
-      cursor: move;
-      user-select: none;
-      z-index: 100;
-      pointer-events: auto;
-      
-      /* Predominantly dark with subtle cyan→amber lift */
-      background: linear-gradient(
-        135deg,
-        rgba(10, 14, 18, 0.94) 0%,
-        rgba(16, 20, 26, 0.92) 58%,
-        rgba(32, 24, 18, 0.88) 100%
-      );
-      
-      backdrop-filter: blur(14px) saturate(170%);
-      -webkit-backdrop-filter: blur(14px) saturate(170%);
-      
-      border: 1px solid rgba(255, 186, 110, 0.18);
-      border-radius: 12px;
-      
-      box-shadow: 
-        0 10px 28px rgba(0, 0, 0, 0.45),
-        0 0 22px rgba(0, 210, 255, 0.08),
-        0 0 28px rgba(255, 170, 70, 0.08),
-        inset 0 1px 1px rgba(255, 255, 255, 0.06),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.10);
-      
-      padding: 16px;
-      font-family: 'Disket Mono', monospace;
-      
-      transition: box-shadow 0.2s ease;
-    }
+      #tool-panel button:hover {
+        transform: translateY(-1px) scale(1.03);
+        border-color: rgba(0, 220, 255, 0.35);
+        box-shadow:
+          0 6px 14px rgba(0, 0, 0, 0.4),
+          0 0 12px rgba(0, 210, 255, 0.18),
+          0 0 12px rgba(255, 170, 70, 0.18),
+          inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      }
 
-    /* Scrollbar styling for route panel */
-    #route-table::-webkit-scrollbar {
-      width: 10px;
-    }
-    #route-table::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 8px;
-    }
-    #route-table::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(0, 200, 255, 0.28), rgba(255, 170, 70, 0.28));
-      border-radius: 8px;
-      border: 2px solid rgba(0, 0, 0, 0.35);
-      box-shadow: 0 0 8px rgba(0, 200, 255, 0.15), 0 0 10px rgba(255, 170, 70, 0.15);
-    }
-    #route-table::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, rgba(0, 220, 255, 0.34), rgba(255, 186, 110, 0.34));
-    }
-    /* Firefox */
-    #route-table {
-      scrollbar-color: rgba(0, 200, 255, 0.35) rgba(255, 255, 255, 0.04);
-      scrollbar-width: thin;
-    }
-    
-    #route-table:active {
-      box-shadow: 
-        0 12px 30px rgba(0, 0, 0, 0.55),
-        0 0 28px rgba(0, 210, 255, 0.10),
-        0 0 32px rgba(255, 170, 70, 0.12),
-        inset 0 1px 1px rgba(255, 255, 255, 0.16),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.16);
-    }
-    
-    #route-table h3 {
-      margin: 0 0 12px 0;
-      font-size: 16px;
-      color: #cfe8f7;
-      text-shadow: 0 0 6px rgba(0, 200, 255, 0.28);
-      font-weight: bold;
-    }
-    
-    #route-table table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    
-    #route-table th {
-      text-align: left;
-      padding: 8px 6px;
-      color: #dceffc;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      font-weight: bold;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    #route-table td {
-      padding: 6px;
-      color: #e9f2fb;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    
-    #route-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    #route-table tr:hover {
-      background: rgba(0, 170, 255, 0.08);
-    }
-    
-    #route-table .step-number {
-      color: #8be3ff;
-      font-weight: bold;
-      min-width: 30px;
-    }
-    
-    #route-table .waypoint-type {
-      color: #c9d9e6;
-      font-size: 11px;
-    }
+      #tool-panel button:active {
+        transform: translateY(0) scale(0.98);
+        box-shadow:
+          0 3px 8px rgba(0, 0, 0, 0.45),
+          inset 0 1px 1px rgba(255, 255, 255, 0.08);
+      }
 
-    #data-release {
-      position: fixed;
-      left: 10px;
-      bottom: 10px;
-      padding: 8px 12px;
-      font-family: 'Disket Mono', monospace;
-      font-size: 12px;
-      color: #ffe0d4;
-      letter-spacing: 0.5px;
-      text-transform: lowercase;
-      background: none;
-      border: none;
-      box-shadow: none;
-      opacity: 0.5;
-      pointer-events: none;
-      user-select: none;
-      z-index: 5;
-    }
-    /* Error overlay styles */
-    #error-overlay {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      pointer-events: none; /* inner controls enable pointer-events */
-    }
-    #error-overlay[aria-hidden="false"] { pointer-events: auto; }
-    #error-overlay-inner {
-      max-width: 720px;
-      width: calc(100% - 48px);
-      background: rgba(16, 18, 22, 0.95);
-      color: #ffddd0;
-      border: 1px solid rgba(255,140,60,0.22);
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 6px 16px rgba(255, 100, 40, 0.06);
-      font-family: 'Disket Mono', monospace;
-      text-align: left;
-    }
-    #error-overlay button {
-      cursor: pointer;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: none;
-      background: linear-gradient(180deg, rgba(255,140,60,0.18), rgba(255,120,40,0.12));
-      color: #fff;
-      font-weight: bold;
-    }
-    #error-overlay button:hover { filter: brightness(1.08); }
-  </style>
-  <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/": "https://unpkg.com/three@0.160.0/"
-    }
-  }
-  </script>
-</head>
-<body>
-  <div id="tool-panel">
-    <button id="tool-search" title="Search">🔍</button>
-  </div>
-  <div id="search-panel" class="search-collapsed">
-    <input id="search-input" type="text" placeholder="Search system or ID" autocomplete="off" />
-    <ul id="search-results"></ul>
-  </div>
-  <div id="app"></div>
-  <div id="overlay">Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan</div>
-  <!-- Error overlay: hidden by default, shown on fetch failures -->
-  <div id="error-overlay" role="alertdialog" aria-hidden="true" style="display:none;">
-    <div id="error-overlay-inner">
-      <div id="error-message" aria-live="assertive">Failed to load data</div>
-      <div id="error-details" style="white-space:pre-wrap; font-size:12px; opacity:0.9; margin-top:8px;"></div>
-      <div style="margin-top:10px; display:flex; gap:8px;">
-        <button id="error-retry">Retry</button>
-        <button id="error-copy">Copy error</button>
+      /* Search panel */
+      #search-panel {
+        position: fixed;
+        top: 50%;
+        left: 70px;
+        transform: translateY(-50%);
+        width: 280px;
+        max-height: 70vh;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: rgba(8, 10, 14, 0.88);
+        border: 1px solid rgba(255, 186, 110, 0.16);
+        border-radius: 12px;
+        box-shadow:
+          0 10px 28px rgba(0, 0, 0, 0.45),
+          0 0 22px rgba(0, 210, 255, 0.08),
+          0 0 28px rgba(255, 170, 70, 0.08),
+          inset 0 1px 1px rgba(255, 255, 255, 0.06),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(12px) saturate(170%);
+        -webkit-backdrop-filter: blur(12px) saturate(170%);
+        z-index: 7;
+        pointer-events: auto;
+        opacity: 1;
+        transition:
+          opacity 140ms ease,
+          transform 140ms ease;
+      }
+
+      #search-panel.search-collapsed {
+        opacity: 0;
+        transform: translate(-10px, -50%);
+        pointer-events: none;
+      }
+
+      #search-input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(15, 20, 28, 0.9);
+        color: #e9f2fb;
+        font-family: "Disket Mono", monospace;
+        font-size: 13px;
+        outline: none;
+        box-sizing: border-box;
+        box-shadow:
+          inset 0 1px 1px rgba(255, 255, 255, 0.08),
+          0 4px 12px rgba(0, 0, 0, 0.35);
+        transition:
+          border-color 120ms ease,
+          box-shadow 120ms ease;
+      }
+
+      #search-input:focus {
+        border-color: rgba(0, 220, 255, 0.35);
+        box-shadow:
+          0 0 12px rgba(0, 210, 255, 0.18),
+          0 0 12px rgba(255, 170, 70, 0.18),
+          inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      }
+
+      #search-results {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 50vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      #search-results li {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(20, 24, 30, 0.85);
+        color: #e9f2fb;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        transition:
+          background 100ms ease,
+          border-color 100ms ease,
+          transform 100ms ease;
+      }
+
+      #search-results li:hover {
+        background: rgba(0, 170, 255, 0.08);
+        border-color: rgba(0, 220, 255, 0.25);
+        transform: translateY(-1px);
+      }
+
+      #search-results li .sid {
+        color: #8be3ff;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      #route-table {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        max-width: 400px;
+        max-height: 80vh;
+        overflow-y: auto;
+        cursor: move;
+        user-select: none;
+        z-index: 100;
+        pointer-events: auto;
+
+        /* Predominantly dark with subtle cyan→amber lift */
+        background: linear-gradient(
+          135deg,
+          rgba(10, 14, 18, 0.94) 0%,
+          rgba(16, 20, 26, 0.92) 58%,
+          rgba(32, 24, 18, 0.88) 100%
+        );
+
+        backdrop-filter: blur(14px) saturate(170%);
+        -webkit-backdrop-filter: blur(14px) saturate(170%);
+
+        border: 1px solid rgba(255, 186, 110, 0.18);
+        border-radius: 12px;
+
+        box-shadow:
+          0 10px 28px rgba(0, 0, 0, 0.45),
+          0 0 22px rgba(0, 210, 255, 0.08),
+          0 0 28px rgba(255, 170, 70, 0.08),
+          inset 0 1px 1px rgba(255, 255, 255, 0.06),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+
+        padding: 16px;
+        font-family: "Disket Mono", monospace;
+
+        transition: box-shadow 0.2s ease;
+      }
+
+      /* Scrollbar styling for route panel */
+      #route-table::-webkit-scrollbar {
+        width: 10px;
+      }
+      #route-table::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 8px;
+      }
+      #route-table::-webkit-scrollbar-thumb {
+        background: linear-gradient(
+          180deg,
+          rgba(0, 200, 255, 0.28),
+          rgba(255, 170, 70, 0.28)
+        );
+        border-radius: 8px;
+        border: 2px solid rgba(0, 0, 0, 0.35);
+        box-shadow:
+          0 0 8px rgba(0, 200, 255, 0.15),
+          0 0 10px rgba(255, 170, 70, 0.15);
+      }
+      #route-table::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(
+          180deg,
+          rgba(0, 220, 255, 0.34),
+          rgba(255, 186, 110, 0.34)
+        );
+      }
+      /* Firefox */
+      #route-table {
+        scrollbar-color: rgba(0, 200, 255, 0.35) rgba(255, 255, 255, 0.04);
+        scrollbar-width: thin;
+      }
+
+      #route-table:active {
+        box-shadow:
+          0 12px 30px rgba(0, 0, 0, 0.55),
+          0 0 28px rgba(0, 210, 255, 0.1),
+          0 0 32px rgba(255, 170, 70, 0.12),
+          inset 0 1px 1px rgba(255, 255, 255, 0.16),
+          inset 0 -1px 1px rgba(0, 0, 0, 0.16);
+      }
+
+      #route-table h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        color: #cfe8f7;
+        text-shadow: 0 0 6px rgba(0, 200, 255, 0.28);
+        font-weight: bold;
+      }
+
+      #route-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      #route-table th {
+        text-align: left;
+        padding: 8px 6px;
+        color: #dceffc;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      #route-table td {
+        padding: 6px;
+        color: #e9f2fb;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      #route-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      #route-table tr:hover {
+        background: rgba(0, 170, 255, 0.08);
+      }
+
+      #route-table .step-number {
+        color: #8be3ff;
+        font-weight: bold;
+        min-width: 30px;
+      }
+
+      #route-table .waypoint-type {
+        color: #c9d9e6;
+        font-size: 11px;
+      }
+
+      #data-release {
+        position: fixed;
+        left: 10px;
+        bottom: 10px;
+        padding: 8px 12px;
+        font-family: "Disket Mono", monospace;
+        font-size: 12px;
+        color: #ffe0d4;
+        letter-spacing: 0.5px;
+        text-transform: lowercase;
+        background: none;
+        border: none;
+        box-shadow: none;
+        opacity: 0.5;
+        pointer-events: none;
+        user-select: none;
+        z-index: 5;
+      }
+      /* Error overlay styles */
+      #error-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        pointer-events: none; /* inner controls enable pointer-events */
+      }
+      #error-overlay[aria-hidden="false"] {
+        pointer-events: auto;
+      }
+      #error-overlay-inner {
+        max-width: 720px;
+        width: calc(100% - 48px);
+        background: rgba(16, 18, 22, 0.95);
+        color: #ffddd0;
+        border: 1px solid rgba(255, 140, 60, 0.22);
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow:
+          0 10px 30px rgba(0, 0, 0, 0.6),
+          0 6px 16px rgba(255, 100, 40, 0.06);
+        font-family: "Disket Mono", monospace;
+        text-align: left;
+      }
+      #error-overlay button {
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: none;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 140, 60, 0.18),
+          rgba(255, 120, 40, 0.12)
+        );
+        color: #fff;
+        font-weight: bold;
+      }
+      #error-overlay button:hover {
+        filter: brightness(1.08);
+      }
+    </style>
+    <!-- Import map to allow bare imports like `import * as THREE from "three"` -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/": "https://unpkg.com/three@0.160.0/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="tool-panel">
+      <button id="tool-search" title="Search">🔍</button>
+    </div>
+    <div id="search-panel" class="search-collapsed">
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Search system or ID"
+        autocomplete="off"
+      />
+      <ul id="search-results"></ul>
+    </div>
+    <div id="app"></div>
+    <div id="overlay">Drag = orbit • Wheel/Pinch = zoom • Right-drag = pan</div>
+    <!-- Error overlay: hidden by default, shown on fetch failures -->
+    <div
+      id="error-overlay"
+      role="alertdialog"
+      aria-hidden="true"
+      style="display: none"
+    >
+      <div id="error-overlay-inner">
+        <div id="error-message" aria-live="assertive">Failed to load data</div>
+        <div
+          id="error-details"
+          style="
+            white-space: pre-wrap;
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 8px;
+          "
+        ></div>
+        <div style="margin-top: 10px; display: flex; gap: 8px">
+          <button id="error-retry">Retry</button>
+          <button id="error-copy">Copy error</button>
+        </div>
       </div>
     </div>
-  </div>
-  <div id="data-release" aria-live="polite" role="status"></div>
-  <script type="module" src="src/main.js"></script>
-</body>
+    <div id="data-release" aria-live="polite" role="status"></div>
+    <script type="module" src="src/main.js"></script>
+  </body>
 </html>

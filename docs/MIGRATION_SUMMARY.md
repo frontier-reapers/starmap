@@ -3,7 +3,9 @@
 ## Completed Tasks ✅
 
 ### 1. Normalized Project Structure
+
 Reorganized the project into a standard layout:
+
 - **src/** - Application source code (main.js)
 - **public/** - Static assets (index.html, favicon.ico, data/)
 - **tests/** - Test suites (unit/ and integration/)
@@ -11,32 +13,40 @@ Reorganized the project into a standard layout:
 - **.vscode/** - VS Code tasks and settings
 
 ### 2. Docker Configurations
+
 Created two Dockerfiles:
+
 - **docker/Dockerfile.web** - nginx-based container for serving the web app
 - **docker/Dockerfile.data** - Python container for running data build scripts
 - **docker-compose.yml** - Orchestration file for easy deployment
 
 ### 3. Enhanced .gitignore
+
 Added comprehensive ignore patterns for:
-- Python artifacts (__pycache__, .venv, .pytest_cache, etc.)
+
+- Python artifacts (**pycache**, .venv, .pytest_cache, etc.)
 - Node.js artifacts (node_modules/, package-lock.json, etc.)
 - Build outputs (dist/, .cache/)
-- IDE files (.vscode/*, .idea/)
+- IDE files (.vscode/\*, .idea/)
 
 ### 4. Test Suite
+
 Created comprehensive test coverage:
 
 **Python Tests** (tests/unit/test_build_data.py):
+
 - Coordinate transformation validation
 - Meters-to-light-years conversion
 - Rx(-90°) rotation verification
 
 **JavaScript Unit Tests** (tests/unit/starmap.test.js):
+
 - Coordinate transformation logic
 - Bounds computation
 - Binary data parsing (little-endian Float32/Uint32)
 
 **Integration Tests** (tests/integration/starmap.spec.js):
+
 - Full rendering pipeline verification
 - Data loading and parsing
 - Canvas rendering
@@ -44,6 +54,7 @@ Created comprehensive test coverage:
 - Mouse hover interactions
 
 ### 5. Configuration Files
+
 - **package.json** - Node.js dependencies and scripts
 - **requirements.txt** - Python dependencies (pytest, pytest-cov)
 - **vitest.config.js** - JavaScript unit test configuration
@@ -53,7 +64,9 @@ Created comprehensive test coverage:
 - **.dockerignore** - Docker build exclusions
 
 ### 6. VS Code Tasks
+
 Created 10 tasks accessible via `Ctrl+Shift+P` → "Run Task":
+
 1. Start Dev Server
 2. Build Data from SQLite
 3. Run Unit Tests
@@ -68,6 +81,7 @@ Created 10 tasks accessible via `Ctrl+Shift+P` → "Run Task":
 ## Quick Start Commands
 
 ### Initial Setup
+
 ```bash
 # Install JavaScript dependencies
 npm install
@@ -82,6 +96,7 @@ npm run build:data
 ```
 
 ### Development
+
 ```bash
 # Start dev server (http://localhost:3000)
 npm run dev
@@ -90,6 +105,7 @@ npm run dev
 ```
 
 ### Testing
+
 ```bash
 # All tests
 npm test
@@ -108,6 +124,7 @@ pytest tests/unit/test_build_data.py -v
 ```
 
 ### Docker
+
 ```bash
 # Build images
 docker-compose build
@@ -122,6 +139,7 @@ docker-compose --profile tools run data-builder
 ## File Changes Summary
 
 ### New Files Created
+
 - src/main.js (moved from public/)
 - tests/unit/test_build_data.py
 - tests/unit/starmap.test.js
@@ -143,10 +161,12 @@ docker-compose --profile tools run data-builder
 - data/inspect_db.py
 
 ### Modified Files
+
 - public/index.html (updated script src path)
 - .gitignore (comprehensive Python/JS patterns)
 
 ### Directory Structure
+
 ```
 starmap/
 ├── .vscode/

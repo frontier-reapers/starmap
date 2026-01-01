@@ -27,6 +27,7 @@ Set the following environment variable in your Cloudflare Pages project settings
 - **Python version**: `PYTHON_VERSION` = `3.12` (or higher)
 
 To set this:
+
 1. Go to your Cloudflare Pages project
 2. Navigate to **Settings** → **Environment variables**
 3. Add `PYTHON_VERSION` with value `3.12`
@@ -71,6 +72,7 @@ Direct upload is not recommended because the build process requires Python to ge
 ## Continuous Deployment
 
 Once set up, Cloudflare Pages will automatically:
+
 - Deploy on every push to `main` branch
 - Create preview deployments for pull requests
 - Download the latest `static.db` on each build
@@ -92,7 +94,8 @@ To use a custom domain:
 
 **Root Cause**: The evefrontier_datasets repository may not have a database file in the latest release, or the filename has changed.
 
-**Solution**: 
+**Solution**:
+
 1. Check https://github.com/Scetrov/evefrontier_datasets/releases for available releases
 2. The build script checks for both `static.db` and `static_data.db` filenames
 3. If no release has the database file, download it manually and add to your repository:
@@ -109,6 +112,7 @@ To use a custom domain:
 **Root Cause**: The `static.db` file is large (~200MB) and may timeout on slower connections.
 
 **Solution**: Add the file to your repository as a fallback:
+
 ```bash
 # Download manually first
 curl -L -o data/static.db [DOWNLOAD_URL]
@@ -124,6 +128,7 @@ git push
 ### Build Timeout
 
 **Solution**: The default 15-minute timeout should be sufficient. If builds timeout:
+
 - The download and build process typically takes 2-5 minutes
 - If downloading `static.db` times out, add it to your repository as fallback
 - Contact Cloudflare support to increase timeout limit if needed
@@ -174,6 +179,7 @@ Monitor your deployment:
 ## Cost
 
 Cloudflare Pages is **free** for:
+
 - Unlimited sites
 - Unlimited requests
 - Unlimited bandwidth
@@ -185,6 +191,7 @@ Paid plans available for more concurrent builds and advanced features.
 ## Security
 
 Cloudflare Pages provides:
+
 - **DDoS protection** included
 - **Web Application Firewall (WAF)** available
 - **Access control** for preview deployments
@@ -209,6 +216,7 @@ If you prefer using a configuration file, create `.cloudflare/pages.json`:
 ## Support
 
 For Cloudflare Pages specific issues:
+
 - [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)
 - [Cloudflare Community](https://community.cloudflare.com/)
 - [Cloudflare Support](https://support.cloudflare.com/)
@@ -216,6 +224,7 @@ For Cloudflare Pages specific issues:
 ## Alternative: Cloudflare Workers Sites
 
 If you need dynamic features (backend API), consider:
+
 - Cloudflare Workers for backend
 - Cloudflare D1 for database
 - Cloudflare R2 for object storage

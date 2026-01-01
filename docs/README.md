@@ -51,6 +51,7 @@ starmap/
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 18+ (for dev server and tests)
 - Python 3.12+ (for data processing)
 - Docker (optional, for containerized deployment)
@@ -58,6 +59,7 @@ starmap/
 ### Installation
 
 1. **Install JavaScript dependencies:**
+
    ```bash
    npm install
    ```
@@ -73,6 +75,7 @@ starmap/
 ### Development
 
 1. **Generate build artifacts and binary data** from SQLite database (recommended):
+
    ```bash
    npm run build
    # or to only build data and pass a release label explicitly:
@@ -110,6 +113,7 @@ npm run test:watch
 ```
 
 **Test Summary:**
+
 - **JavaScript Unit Tests**: 8 tests for coordinate transforms, bounds computation, and binary parsing
 - **Python Unit Tests**: 5 tests for data transformation and conversion logic
 - **Integration Tests**: 8-9 E2E tests using Playwright (requires dev server)
@@ -140,6 +144,7 @@ Deploy to Cloudflare's global CDN for free hosting with automatic HTTPS, DDoS pr
 **See [Cloudflare Pages Deployment Guide](./CLOUDFLARE_PAGES.md) for complete instructions.**
 
 Quick setup:
+
 1. Connect Cloudflare Pages with build command `./build.sh` and output `public`
 2. Set environment variable: `PYTHON_VERSION=3.11`
 
@@ -181,6 +186,7 @@ docker run \
 ### Other Platforms
 
 The application is a static site with a Python build step. Deploy to any platform that supports:
+
 - Python 3.11+ for build step
 - Static file hosting
 
@@ -188,21 +194,25 @@ Supported: Vercel, Netlify, GitHub Pages (with Actions), AWS S3, Azure Static We
 
 ## Data Format
 
-### Input: SQLite Database (`data/static.db`) 
+### Input: SQLite Database (`data/static.db`)
+
 - **SolarSystems** table with columns: `solarSystemId`, `name`, `centerX`, `centerY`, `centerZ` (positions in meters)
 - **Jumps** table with columns for system-to-system connections
 
 ### Data Builder CLI options (black holes)
+
 - `--black-holes-csv <path>` — Provide a CSV file containing one or more system IDs (one per line or comma-separated) that should be treated as black holes.
 - `--black-holes-table <table>` — Provide an SQLite table name containing black hole system IDs (the builder will try to auto-detect a suitable column such as `solarSystemId`, `id`, or `system_id`).
 - `--black-holes-col <column>` — (Optional) Explicit column name in the `--black-holes-table` to read IDs from.
 
 Behavior and acceptance:
+
 - If either `--black-holes-csv` or `--black-holes-table` is provided, the builder will read those IDs and validate that they exist in the systems table; the build fails with a clear diagnostic if any provided black hole ID is missing.
 - If no flags are provided the builder falls back to the historical default IDs `[30000001, 30000002, 30000003]`.
 - The generated `manifest.json` includes `counts.systems_black_holes` so consumers can show layer counts without scanning binaries.
 
 ### Output: Binary Files (`public/data/`)
+
 - **systems_positions.bin** - Float32Array of (x,y,z) coordinates in light-years with Rx(-90°) transform
 - **systems_ids.bin** - Uint32Array of system IDs
 - **systems_names.json** - JSON object mapping system IDs to names
@@ -212,11 +222,13 @@ Behavior and acceptance:
 ## Architecture
 
 ### Coordinate System
+
 - **Input**: EVE Online coordinates in meters (y-up)
 - **Transform**: Rx(-90°) rotation: `(x, y, z) → (x, z, -y)`
 - **Output**: Light-years in three.js space (y-up)
 
 ### Rendering Pipeline
+
 1. Load binary data files via `fetch()`
 2. Parse as TypedArrays (native little-endian)
 3. Apply coordinate transform
@@ -225,7 +237,9 @@ Behavior and acceptance:
 6. Render with OrbitControls and CSS2D labels
 
 ### Debug Mode
+
 The application includes an on-screen debug panel (bottom-right) showing:
+
 - Data loading progress
 - Parsed data sizes
 - Computed bounds and camera position
@@ -234,17 +248,20 @@ The application includes an on-screen debug panel (bottom-right) showing:
 ## Development Notes
 
 ### Browser Compatibility
+
 - Requires ES6 modules support
 - Uses import maps for three.js CDN imports
 - Tested on Chrome 100+, Firefox 100+, Safari 16+
 
 ### Performance
+
 - 24,426 stars rendered as Points with additive blending
 - 7,408 jump connections as LineSegments
 - Frustum culling disabled for stable performance
 - Point size: 2.5px at 1080p
 
 ### Testing Strategy
+
 - **Python unit tests**: Verify coordinate transforms and data processing
 - **JavaScript unit tests**: Test bounds computation and binary parsing logic
 - **Integration tests**: E2E browser tests with Playwright verifying full rendering pipeline
@@ -252,16 +269,19 @@ The application includes an on-screen debug panel (bottom-right) showing:
 ## Troubleshooting
 
 ### Black screen / No stars visible
+
 1. Check debug panel for errors
 2. Verify binary data files were generated: `npm run build:data`
 3. Ensure `data/static.db` exists and has data
 4. Check browser console for module resolution errors
 
 ### Import map errors
+
 - Ensure browser supports import maps (Chrome 89+, Firefox 108+, Safari 16.4+)
 - Check network tab for failed CDN requests
 
 ### Docker issues
+
 - Ensure Docker daemon is running
 - Check that data files exist in `public/data/` before building web image
 - For data builder, verify volume mounts are correct
