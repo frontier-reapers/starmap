@@ -6,8 +6,8 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Starmap Application", () => {
   test.beforeEach(async ({ page }) => {
-    // Start from the index page with debug mode enabled
-    await page.goto("http://localhost:3000/?debug=true");
+    // Start from the index page without debug panel shown by default
+    await page.goto("http://localhost:3000/");
   });
 
   test("should load the page with title", async ({ page }) => {
@@ -32,7 +32,9 @@ test.describe("Starmap Application", () => {
   });
 
   test("should display debug panel with logs", async ({ page }) => {
-    // Wait for debug panel to appear
+    // Click the debug toggle to show the panel
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
 
@@ -43,6 +45,9 @@ test.describe("Starmap Application", () => {
   });
 
   test("should load binary data successfully", async ({ page }) => {
+    // Open debug panel to read logs
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
 
@@ -61,7 +66,11 @@ test.describe("Starmap Application", () => {
   });
 
   test("should render stars with non-zero bounds", async ({ page }) => {
+    // Open debug panel to read logs
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
 
     // Wait for bounds computation
     await page.waitForFunction(
@@ -119,6 +128,8 @@ test.describe("Starmap Application", () => {
   });
 
   test("should load station systems data", async ({ page }) => {
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
 
@@ -156,10 +167,10 @@ test.describe("Starmap Application", () => {
   });
 
   test("should display station emoji in labels", async ({ page }) => {
-    // Wait for page to be ready
+    // Wait for page to be ready and open debug panel
     await page.waitForTimeout(2000);
-
-    // Get debug panel to find a station system
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
 
@@ -970,6 +981,9 @@ test.describe("Starmap Application", () => {
   });
 
   test("should load black hole systems and report count", async ({ page }) => {
+    // Open debug panel to read logs
+    const debugBtn = page.locator("#tool-debug");
+    await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
 
