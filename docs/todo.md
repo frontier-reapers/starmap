@@ -10,8 +10,8 @@ Concrete, actionable tasks to improve the starmap data pipeline, rendering, and 
 - [ ] Persist computed bounds and system counts to `manifest.json` during build so the frontend can skip recomputing bounds on load (helps fit-to-view and debug logging).
  - [ ] Persist additional metadata to `manifest.json`: include `bounds` (min/max/center/radius), per-layer counts, and an optional checksum (sha256) for each binary blob so the frontend can quickly validate cached assets.
 	 - Acceptance: `manifest.json` contains `bounds.center`, `bounds.radius`, `counts.{systems,jumps,stations,black_holes}`, and `blobs.<name>.sha256` when `--release` or `--hash` option is passed; a Python unit test validates these fields are written.
- - [ ] Detect and fail on duplicate or non-unique system IDs during build (prevent subtle indexing bugs downstream).
-	 - Acceptance: `build_data.py` exits non-zero and prints a clear diagnostic when duplicate IDs are present; a unit test exercises the failure mode.
+ - [x] Detect and fail on duplicate or non-unique system IDs during build (prevent subtle indexing bugs downstream).  
+ 	 - Acceptance: Implemented — `build_data.py` now exits with a clear diagnostic when duplicate IDs are present; `tests/unit/test_build_data_duplicates.py` verifies the failure mode.
  - [ ] Allow optional input tables/files for stations and black holes instead of hardcoding; provide CLI flags and fallbacks (CSV or SQLite table).
 	 - Acceptance: `--black-holes-csv` and/or `--black-holes-table` flags supported and documented; tests validate parsing and fallback behavior.
 

@@ -164,6 +164,20 @@ def main():
         zv = float(row[z_col]) if z_col else 0.0
         systems.append((int(sid), nm, xv, yv, zv))
 
+    # Detect duplicate system IDs early to avoid downstream indexing bugs
+    seen = {}
+    duplicates = []
+    for sid, nm, x, y, z in systems:
+        if sid in seen:
+            duplicates.append(sid)
+        else:
+            seen[sid] = nm
+    if duplicates:
+        sample = duplicates[:5]
+        print("ERROR: Duplicate or non-unique system IDs detected:", file=sys.stderr)
+        print(f" - {len(duplicates)} duplicate IDs (examples: {sample})", file=sys.stderr)
+        raise SystemExit(1)
+
     # Load systems with NPC stations
     station_systems = set()
     try:
