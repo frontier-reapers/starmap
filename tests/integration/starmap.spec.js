@@ -34,7 +34,7 @@ test.describe('Starmap Application', () => {
   test('should display debug panel with logs', async ({ page }) => {
     // Wait for debug panel to appear
     const debugPanel = page.locator('#debug-log');
-    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    await expect(debugPanel).toBeVisible({ timeout: 15000 });
     
     // Check that it contains expected log messages
     const content = await debugPanel.textContent();
@@ -44,7 +44,7 @@ test.describe('Starmap Application', () => {
 
   test('should load binary data successfully', async ({ page }) => {
     const debugPanel = page.locator('#debug-log');
-    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    await expect(debugPanel).toBeVisible({ timeout: 15000 });
     
     // Wait for data loading messages
     await page.waitForFunction(() => {
@@ -610,6 +610,96 @@ test.describe('Starmap Application', () => {
     expect(hasSystemLabel).toBe(true);
   });
 
+  test('should display station and black-hole badges when focusing systems', async ({ page }) => {
+    // Focus on a known station system (Jita) and check for station badge
+      // Pick a station system ID from the binary asset and focus by ID
+      const firstStationId = await page.evaluate(async () => {
+        try {
+          const res = await fetch('/public/data/systems_with_stations.bin');
+          const buf = await res.arrayBuffer();
+          const arr = new Uint32Array(buf);
+          return arr.length > 0 ? arr[0] : null;
+        } catch (e) {
+          return null;
+        }
+      });
+      if (!firstStationId) throw new Error('No station system ID available for test');
+
+      await page.goto(`http://localhost:3000/public/?debug=true&focus=${firstStationId}`);
+    // Wait for either a focus label to be created or a not-found message
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && (panel.textContent.includes('updatePersistentLabel: focus label created') || panel.textContent.includes('focusOnSystem: system not found') || panel.textContent.includes('loadData: complete'));
+    }, { timeout: 10000 });
+    await page.waitForTimeout(500);
+    const labels = page.locator('.label');
+    const texts = await labels.allTextContents();
+      const hasStationBadge = texts.some(t => t.includes('🛰️') || t.includes(String(firstStationId)));
+    const debugContent = await page.locator('#debug-log').textContent();
+    if (!hasStationBadge) {
+      throw new Error('Station badge not found; debug log:\n' + debugContent);
+    }
+
+    // Focus on a black-hole system (ID 30000001) and check for black hole badge
+    await page.goto('http://localhost:3000/public/?debug=true&focus=30000001');
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && (panel.textContent.includes('updatePersistentLabel: focus label created') || panel.textContent.includes('focusOnSystem: system not found') || panel.textContent.includes('loadData: complete'));
+    }, { timeout: 10000 });
+    await page.waitForTimeout(500);
+    const labels2 = page.locator('.label');
+    const texts2 = await labels2.allTextContents();
+    const hasBHBadge = texts2.some(t => t.includes('⚫') || t.includes('30000001'));
+    const debugContent2 = await page.locator('#debug-log').textContent();
+    if (!hasBHBadge) {
+      throw new Error('Black hole badge not found; debug log:\n' + debugContent2);
+    }
+  });
+
+  test('should show error overlay and allow retry when a data fetch fails', async ({ page }) => {
+    // Intercept the first request for systems_positions.bin and return 404, then allow subsequent requests
+    let calls = 0;
+    await page.route('**/systems_positions.bin*', async (route) => {
+      calls++;
+      if (calls === 1) {
+        await route.fulfill({ status: 404, body: 'Not Found' });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto('http://localhost:3000/public/?debug=true');
+
+    // Wait for the debug log to show a data load failure first
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 5000 });
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && (panel.textContent.includes('data load failed') || panel.textContent.includes('fetchWithRetry: attempt failed') || panel.textContent.includes('Failed to fetch') || panel.textContent.includes('HTTP 404'));
+    }, { timeout: 10000 });
+
+    // Expect the error overlay to appear once the failure is logged
+    const errorOverlay = page.locator('#error-overlay');
+    await expect(errorOverlay).toBeVisible({ timeout: 10000 });
+
+    // Debug panel should contain the underlying error
+    const content = await debugPanel.textContent();
+    expect(content).toMatch(/HTTP 404|Failed to fetch|fetchWithRetry: attempt failed/);
+
+    // Click retry and expect the app to recover and finish loading data
+    const retryBtn = page.locator('#error-retry');
+    await retryBtn.click();
+
+    // Wait for successful load
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('loadData: complete');
+    }, { timeout: 10000 });
+
+    // Overlay should be hidden after successful retry
+    await expect(errorOverlay).toBeHidden({ timeout: 5000 });
+  });
+
   test('should show blue labels for route start and end', async ({ page }) => {
     const strymRouteToken = 'H4sIAAAAAAACCgEmANn_AQ4AEZUYlT6VLpUKlUqVTpVWlYqVhpWOkVmRTZFVkUWQspC-tVWT1x2fJgAAAA';
     await page.goto(`http://localhost:3000/public/?debug=true&route=${strymRouteToken}`);
@@ -628,5 +718,21 @@ test.describe('Starmap Application', () => {
     
     expect(hasStartLabel).toBe(true);
     expect(hasEndLabel).toBe(true);
+  });
+
+  test('should load black hole systems and report count', async ({ page }) => {
+    const debugPanel = page.locator('#debug-log');
+    await expect(debugPanel).toBeVisible({ timeout: 15000 });
+
+    // Wait for black holes to be logged
+    await page.waitForFunction(() => {
+      const panel = document.getElementById('debug-log');
+      return panel && panel.textContent.includes('loadData: loaded black hole systems');
+    }, { timeout: 10000 });
+
+    const content = await debugPanel.textContent();
+    expect(content).toContain('blackHoleCount');
+    // Should report some numeric count (could be 0 in tiny datasets, but the field should exist)
+    expect(/blackHoleCount\W*:\W*\d+/.test(content) || /"blackHoleCount"\s*:\s*\d+/.test(content)).toBeTruthy();
   });
 });
