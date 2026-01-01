@@ -85,6 +85,7 @@ logs/
 
 # Build artifacts
 public/build-info.json
+build-info.json
 
 # Environment
 .env
