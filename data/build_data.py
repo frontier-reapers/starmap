@@ -156,16 +156,16 @@ def compute_bounds(positions):
     center_y = (min_y + max_y) / 2.0
     center_z = (min_z + max_z) / 2.0
 
-    # radius: max distance from center
-    radius = 0.0
+    # radius: maximum distance from center (compute squared distances first for clarity)
+    radius_squared = 0.0
     for x, y, z in zip(xs, ys, zs):
         dx = x - center_x
         dy = y - center_y
         dz = z - center_z
         d2 = dx * dx + dy * dy + dz * dz
-        if d2 > radius:
-            radius = d2
-    radius = math.sqrt(radius)
+        if d2 > radius_squared:
+            radius_squared = d2
+    radius = math.sqrt(radius_squared)
 
     return {
         "min": [min_x, min_y, min_z],
