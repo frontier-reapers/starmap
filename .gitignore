@@ -89,6 +89,7 @@ build-info.json
 
 # Generated test reports
 playwright-report/
+test-results/.last-run.json
 
 # Environment
 .env
