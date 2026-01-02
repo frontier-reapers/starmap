@@ -17,11 +17,34 @@ const DEBUG_ENABLED = (() => {
   }
 })();
 
+let DEBUG_VISIBLE = DEBUG_ENABLED;
+
+console.log("Defining window.toggleDebugPanel");
+window.toggleDebugPanel = function () {
+  DEBUG_VISIBLE = !DEBUG_VISIBLE;
+  console.log("toggleDebugPanel called. New state:", DEBUG_VISIBLE);
+  const panel = document.getElementById("debug-log");
+  if (panel) {
+    panel.style.display = DEBUG_VISIBLE ? "block" : "none";
+    panel.setAttribute("aria-hidden", DEBUG_VISIBLE ? "false" : "true");
+    console.log("Panel display set to:", panel.style.display);
+  } else {
+    console.log("Panel not found");
+  }
+  const btn = document.getElementById("tool-debug");
+  if (btn) {
+    btn.setAttribute("aria-pressed", DEBUG_VISIBLE ? "true" : "false");
+    // Mark as handled by module to prevent inline fallback from interfering
+    btn.setAttribute("data-handled-by-module", "true");
+  }
+  return true; // Prevent inline fallback from running
+};
+
 function _makeDebugPanel() {
-  if (!DEBUG_ENABLED) return null;
   try {
     let panel = document.getElementById("debug-log");
     if (!panel) {
+      console.log("_makeDebugPanel: creating new panel");
       panel = document.createElement("pre");
       panel.id = "debug-log";
       panel.style.position = "fixed";
@@ -33,10 +56,65 @@ function _makeDebugPanel() {
       panel.style.color = "#0f0";
       panel.style.fontSize = "11px";
       panel.style.padding = "6px";
+      panel.style.minWidth = "220px";
+      panel.style.minHeight = "80px";
+      panel.style.border = "1px solid rgba(255,140,60,0.2)";
       panel.style.zIndex = 99999;
       panel.style.whiteSpace = "pre-wrap";
+      panel.setAttribute("role", "log");
+      panel.setAttribute("aria-live", "polite");
+      // Add a small visually-friendly header so the panel is obvious when shown
+      const hdr = document.createElement("div");
+      hdr.className = "debug-header";
+      hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
+      hdr.style.fontSize = "12px";
+      hdr.style.fontWeight = "600";
+      hdr.style.marginBottom = "6px";
+      hdr.style.color = "#ffdca3";
+      panel.appendChild(hdr);
       document.body.appendChild(panel);
+      console.log("_makeDebugPanel: panel created with header");
+    } else {
+      console.log("_makeDebugPanel: found existing panel");
+      // If an inline fallback created the panel before the module loaded, remove
+      // the placeholder text and ensure the module header is present so we can
+      // take over cleanly.
+      try {
+        // Remove any initial text nodes left by the inline fallback
+        for (const node of Array.from(panel.childNodes)) {
+          if (
+            node.nodeType === Node.TEXT_NODE &&
+            node.textContent &&
+            node.textContent.includes("Debug (fallback)")
+          ) {
+            console.log("_makeDebugPanel: removing fallback text");
+            panel.removeChild(node);
+          }
+        }
+        // Ensure header exists
+        if (!panel.querySelector(".debug-header")) {
+          console.log("_makeDebugPanel: adding header to existing panel");
+          const hdr = document.createElement("div");
+          hdr.className = "debug-header";
+          hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
+          hdr.style.fontSize = "12px";
+          hdr.style.fontWeight = "600";
+          hdr.style.marginBottom = "6px";
+          hdr.style.color = "#ffdca3";
+          panel.insertBefore(hdr, panel.firstChild);
+          console.log("_makeDebugPanel: header added. Children count:", panel.childNodes.length);
+        }
+      } catch (e) {
+        /* best-effort cleanup; ignore errors */
+      }
     }
+
+    // Control visibility: prefer the runtime-visible flag so user toggles override
+    // the URL `?debug=true` parameter. DEBUG_VISIBLE is initialized from the
+    // URL but can be changed via the button/keyboard.
+    const visible = Boolean(DEBUG_VISIBLE);
+    panel.style.display = visible ? "block" : "none";
+    panel.setAttribute("aria-hidden", visible ? "false" : "true");
     return panel;
   } catch {
     return null;
@@ -45,13 +123,16 @@ function _makeDebugPanel() {
 
 function debugLog(...args) {
   try {
+    // Always log to console for debugging
+    console.log("debugLog called:", ...args);
+    
     if (DEBUG_ENABLED) {
       console.log(...args);
     }
     const panel = _makeDebugPanel();
     if (panel) {
       const ts = new Date().toISOString();
-      panel.textContent +=
+      const line =
         ts +
         " " +
         args
@@ -64,9 +145,11 @@ function debugLog(...args) {
           })
           .join(" ") +
         "\n";
+      panel.appendChild(document.createTextNode(line));
       panel.scrollTop = panel.scrollHeight;
     }
-  } catch {
+  } catch (e) {
+    console.error("debugLog error:", e);
     // best-effort
   }
 }
@@ -1551,6 +1634,27 @@ function ensureRouteTableInViewport(element) {
   }
   debugLog("main: starting animation loop");
   animate();
+
+  // Keyboard shortcut: Ctrl+Shift+D or Ctrl+Alt+D toggles debug panel
+  window.addEventListener("keydown", (ev) => {
+    // Ignore if typing in input or textarea
+    const tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+    // Accept either Ctrl+Shift+D or Ctrl+Alt+D (also support Meta on mac)
+    const mod = ev.ctrlKey || ev.metaKey;
+    const altOrShift = ev.shiftKey || ev.altKey;
+    if (mod && altOrShift && ev.code === "KeyD") {
+      try {
+        // Prevent browser from handling shortcut (bookmark etc.) and stop propagation
+        if (ev.preventDefault) ev.preventDefault();
+        if (ev.stopPropagation) ev.stopPropagation();
+        toggleDebugPanel();
+      } catch (err) {
+        console.error("toggleDebugPanel failed (keyboard):", err);
+      }
+    }
+  }, { capture: true, passive: false });
 })().catch((err) => {
   debugLog("main() error:", err);
   console.error(err);

@@ -39,6 +39,23 @@ test.describe("Starmap Application", () => {
     await page.waitForFunction(() => typeof window.toggleDebugPanel === 'function', { timeout: 5000 });
     await debugBtn.click();
     const debugPanel = page.locator("#debug-log");
+
+    // Debugging: check element state
+    await page.waitForTimeout(1000);
+    const state = await page.evaluate(() => {
+      const el = document.getElementById("debug-log");
+      if (!el) return "not found";
+      return {
+        display: el.style.display,
+        visibility: el.style.visibility,
+        ariaHidden: el.getAttribute("aria-hidden"),
+        rect: el.getBoundingClientRect(),
+        innerHTML: el.innerHTML.length,
+        computedDisplay: window.getComputedStyle(el).display
+      };
+    });
+    console.log("DEBUG PANEL STATE:", state);
+
     await expect(debugPanel).toBeVisible({ timeout: 15000 });
 
     // Wait for the module to write logs into the panel
@@ -314,6 +331,8 @@ test.describe("Starmap Application", () => {
   });
 
   test("should exclude filtered systems", async ({ page }) => {
+    // Enable debug mode to check logs
+    await page.goto("http://localhost:3000/?debug=true");
     const debugPanel = page.locator("#debug-log");
     await expect(debugPanel).toBeVisible({ timeout: 5000 });
 
@@ -492,22 +511,26 @@ test.describe("Starmap Application", () => {
 
     // Ensure the inline fallback text ("Debug (fallback)") is removed when
     // the module takes over and that the module's header exists.
-    await page.waitForFunction(() => {
-      const p = document.getElementById('debug-log');
-      if (!p) return false;
-      const hasHeader = !!p.querySelector('.debug-header');
-      const hasFallbackText = Array.from(p.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent && n.textContent.includes('Debug (fallback)'));
-      return hasHeader && !hasFallbackText;
-    }, { timeout: 5000 });
+    try {
+      await page.waitForFunction(() => {
+        const p = document.getElementById('debug-log');
+        if (!p) return false;
+        const hasHeader = !!p.querySelector('.debug-header');
+        const hasFallbackText = Array.from(p.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent && n.textContent.includes('Debug (fallback)'));
+        return hasHeader && !hasFallbackText;
+      }, { timeout: 5000 });
+    } catch (e) {
+      const content = await page.evaluate(() => {
+        const p = document.getElementById('debug-log');
+        return p ? p.innerHTML : "null";
+      });
+      console.log("DEBUG PANEL CONTENT:", content);
+      throw e;
+    }
     expect(await page.locator('#debug-log .debug-header').count()).toBeGreaterThan(0);
 
     // Hide using a direct programmatic toggle to avoid flaky duplicate-handler
     // behavior in some headless environments.
-    await page.evaluate(() => window.toggleDebugPanel && window.toggleDebugPanel());
-    await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 5000 });
-    expect(await page.locator('#debug-log').isVisible()).toBeFalsy();
-
-    // Toggle off again programmatically
     await page.evaluate(() => window.toggleDebugPanel && window.toggleDebugPanel());
     await page.waitForSelector('#debug-log', { state: 'hidden', timeout: 5000 });
     expect(await page.locator('#debug-log').isVisible()).toBeFalsy();

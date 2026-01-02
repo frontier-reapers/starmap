@@ -17,10 +17,34 @@ const DEBUG_ENABLED = (() => {
   }
 })();
 
+let DEBUG_VISIBLE = DEBUG_ENABLED;
+
+console.log("Defining window.toggleDebugPanel");
+window.toggleDebugPanel = function () {
+  DEBUG_VISIBLE = !DEBUG_VISIBLE;
+  console.log("toggleDebugPanel called. New state:", DEBUG_VISIBLE);
+  const panel = document.getElementById("debug-log");
+  if (panel) {
+    panel.style.display = DEBUG_VISIBLE ? "block" : "none";
+    panel.setAttribute("aria-hidden", DEBUG_VISIBLE ? "false" : "true");
+    console.log("Panel display set to:", panel.style.display);
+  } else {
+    console.log("Panel not found");
+  }
+  const btn = document.getElementById("tool-debug");
+  if (btn) {
+    btn.setAttribute("aria-pressed", DEBUG_VISIBLE ? "true" : "false");
+    // Mark as handled by module to prevent inline fallback from interfering
+    btn.setAttribute("data-handled-by-module", "true");
+  }
+  return true; // Prevent inline fallback from running
+};
+
 function _makeDebugPanel() {
   try {
     let panel = document.getElementById("debug-log");
     if (!panel) {
+      console.log("_makeDebugPanel: creating new panel");
       panel = document.createElement("pre");
       panel.id = "debug-log";
       panel.style.position = "fixed";
@@ -49,7 +73,9 @@ function _makeDebugPanel() {
       hdr.style.color = "#ffdca3";
       panel.appendChild(hdr);
       document.body.appendChild(panel);
+      console.log("_makeDebugPanel: panel created with header");
     } else {
+      console.log("_makeDebugPanel: found existing panel");
       // If an inline fallback created the panel before the module loaded, remove
       // the placeholder text and ensure the module header is present so we can
       // take over cleanly.
@@ -61,11 +87,13 @@ function _makeDebugPanel() {
             node.textContent &&
             node.textContent.includes("Debug (fallback)")
           ) {
+            console.log("_makeDebugPanel: removing fallback text");
             panel.removeChild(node);
           }
         }
         // Ensure header exists
         if (!panel.querySelector(".debug-header")) {
+          console.log("_makeDebugPanel: adding header to existing panel");
           const hdr = document.createElement("div");
           hdr.className = "debug-header";
           hdr.textContent = "Debug Log — Ctrl+Shift+D to toggle";
@@ -74,6 +102,7 @@ function _makeDebugPanel() {
           hdr.style.marginBottom = "6px";
           hdr.style.color = "#ffdca3";
           panel.insertBefore(hdr, panel.firstChild);
+          console.log("_makeDebugPanel: header added. Children count:", panel.childNodes.length);
         }
       } catch (e) {
         /* best-effort cleanup; ignore errors */
@@ -94,13 +123,16 @@ function _makeDebugPanel() {
 
 function debugLog(...args) {
   try {
+    // Always log to console for debugging
+    console.log("debugLog called:", ...args);
+    
     if (DEBUG_ENABLED) {
       console.log(...args);
     }
     const panel = _makeDebugPanel();
     if (panel) {
       const ts = new Date().toISOString();
-      panel.textContent +=
+      const line =
         ts +
         " " +
         args
@@ -113,9 +145,11 @@ function debugLog(...args) {
           })
           .join(" ") +
         "\n";
+      panel.appendChild(document.createTextNode(line));
       panel.scrollTop = panel.scrollHeight;
     }
-  } catch {
+  } catch (e) {
+    console.error("debugLog error:", e);
     // best-effort
   }
 }
