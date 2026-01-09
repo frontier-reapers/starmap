@@ -314,6 +314,50 @@ function makeGlowSprite(color = 0xffaa00, size = 128) {
   return sprite;
 }
 
+function makeHighlightRingSprite(color = 0x00d4ff, size = 256) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+
+  // Draw a bright blue ring
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const outerRadius = size / 2 - 4;
+  const innerRadius = outerRadius - 32;
+
+  const grd = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    innerRadius,
+    centerX,
+    centerY,
+    outerRadius,
+  );
+  grd.addColorStop(0.0, "rgba(0, 212, 255, 0)");
+  grd.addColorStop(0.5, "rgba(0, 212, 255, 0.8)");
+  grd.addColorStop(1.0, "rgba(0, 212, 255, 0)");
+
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    color,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    opacity: 1.0,
+    sizeAttenuation: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.visible = false;
+  sprite.frustumCulled = false;
+  return sprite;
+}
+
 // --- Tiny helper to load binary files into typed arrays ----------------------
 // Guarded assignment to avoid multiple declarations across included copies
 // of this script in some deployments.
@@ -1143,6 +1187,10 @@ function ensureRouteTableInViewport(element) {
   const { center, radius } = computeBounds(data.positions);
   const hoverSprite = makeGlowSprite();
   scene.add(hoverSprite);
+
+  // Dedicated sprite for the focused system (orange glow)
+  const focusSprite = makeGlowSprite(0xffaa00);
+  scene.add(focusSprite);
   camera.position.set(
     center[0] + radius * 0.6,
     center[1] + radius * 0.3,
@@ -1168,10 +1216,14 @@ function ensureRouteTableInViewport(element) {
     routeEnd: null,
   };
 
+  const highlightGroup = new THREE.Group();
+  scene.add(highlightGroup);
+  const highlightedLabels = [];
+
   function createPersistentLabel(text, type = "focus") {
     const div = document.createElement("div");
     div.className = "label";
-    div.style.marginTop = "-1em";
+    div.style.marginTop = "-1.5em";
 
     // Style based on type
     if (type === "focus") {
@@ -1189,6 +1241,98 @@ function ensureRouteTableInViewport(element) {
     const obj = new CSS2DObject(div);
     scene.add(obj);
     return obj;
+  }
+
+  // --- Dynamic opacity state for dimming transition ---
+  const starOpacityState = {
+    current: 1.0,
+    target: 1.0,
+  };
+  const lineOpacityState = {
+    current: 0.2,
+    target: 0.2, // Default valid line opacity
+  };
+
+  function clearHighlights() {
+    debugLog("clearHighlights: clearing sprites and labels");
+    // Clear ring sprites
+    while (highlightGroup.children.length > 0) {
+      highlightGroup.remove(highlightGroup.children[0]);
+    }
+    // Clear cyan labels
+    highlightedLabels.forEach((l) => scene.remove(l));
+    highlightedLabels.length = 0;
+
+    // Restore opacities (trigger smooth transition)
+    starOpacityState.target = 1.0;
+    lineOpacityState.target = 0.2;
+  }
+
+  function applyHighlights(systemList) {
+    if (!systemList || systemList.length === 0) {
+      clearHighlights();
+      return;
+    }
+    
+    // Check if we already have these highlights (optional opt) but clear first for simplicity
+    clearHighlights();
+    debugLog("applyHighlights: for", systemList);
+
+    // Filter valid systems and get their positions
+    const targets = [];
+    systemList.forEach((input) => {
+      let idx = -1;
+      const asNumber = parseInt(input, 10);
+      if (!isNaN(asNumber)) {
+        idx = data.indexOf.get(asNumber);
+      }
+
+      if (idx === undefined || idx === -1) {
+        const searchName = String(input).toLowerCase();
+        for (const [id, name] of Object.entries(data.idToName)) {
+          if (name.toLowerCase() === searchName) {
+            idx = data.indexOf.get(parseInt(id, 10));
+            break;
+          }
+        }
+      }
+
+      if (idx !== undefined && idx !== -1) {
+        targets.push({
+          idx,
+          id: data.ids[idx],
+          name: data.idToName[String(data.ids[idx])] || String(data.ids[idx]),
+          x: data.positions[idx * 3 + 0],
+          y: data.positions[idx * 3 + 1],
+          z: data.positions[idx * 3 + 2],
+        });
+      }
+    });
+
+    if (targets.length === 0) return;
+
+    // Trigger smooth dimming
+    starOpacityState.target = 0.5;
+    lineOpacityState.target = 0.05;
+
+    // Create rings and labels
+    targets.forEach((t) => {
+      // Create blue ring (approx 0.03 size, reduced from 0.1 to match user feedback)
+      const ring = makeHighlightRingSprite();
+      ring.position.set(t.x, t.y, t.z);
+      ring.scale.set(0.025, 0.025, 0.025);
+      ring.visible = true;
+      highlightGroup.add(ring);
+
+      // Create small cyan label
+      const div = document.createElement("div");
+      div.className = "label highlighted";
+      div.textContent = t.name;
+      const label = new CSS2DObject(div);
+      label.position.set(t.x, t.y, t.z);
+      scene.add(label);
+      highlightedLabels.push(label);
+    });
   }
 
   function updatePersistentLabel(labelType, systemIdOrName) {
@@ -1342,6 +1486,13 @@ function ensureRouteTableInViewport(element) {
       // Update persistent focus label
       updatePersistentLabel("focus", systemIdOrName);
 
+      // Show orange focus sprite
+      if (focusSprite) {
+        focusSprite.position.set(x, y, z);
+        focusSprite.scale.set(0.05, 0.05, 0.05); // Standard glow scale
+        focusSprite.visible = true;
+      }
+      
       debugLog(
         "focusOnSystem: focused on",
         systemIdOrName,
@@ -1357,12 +1508,20 @@ function ensureRouteTableInViewport(element) {
     }
   }
 
-  // Check for focus query parameter on load
+  // Check for focus/highlight query parameters on load
   const urlParams = new URLSearchParams(window.location.search);
   const focusParam = urlParams.get("focus");
+  const highlightParam = urlParams.get("highlight");
+
   if (focusParam) {
     debugLog("main: focus parameter detected", focusParam);
     focusOnSystem(focusParam, false); // Don't animate on initial load
+  }
+  
+  if (highlightParam) {
+    debugLog("main: highlight parameter detected", highlightParam);
+    const systems = highlightParam.split(",").map((s) => s.trim());
+    applyHighlights(systems);
   }
 
   // Handle browser back/forward navigation
@@ -1370,22 +1529,39 @@ function ensureRouteTableInViewport(element) {
     debugLog("popstate: browser navigation detected");
     const currentParams = new URLSearchParams(window.location.search);
     const newFocusParam = currentParams.get("focus");
+    const newHighlightParam = currentParams.get("highlight");
 
+    // Handle focus update
     if (newFocusParam) {
       debugLog("popstate: focusing on", newFocusParam);
-      focusOnSystem(newFocusParam, true); // Animate on navigation (will update label)
+      focusOnSystem(newFocusParam, true);
     } else {
-      debugLog("popstate: no focus parameter, resetting to initial view");
-      // Reset to initial camera position
-      camera.position.set(
-        center[0] + radius * 0.6,
-        center[1] + radius * 0.3,
-        center[2] + radius * 0.6,
-      );
-      controls.target.set(center[0], center[1], center[2]);
-      controls.update();
-      // Remove focus label when navigating away
+      // Clear focus if removed
       updatePersistentLabel("focus", null);
+      if (focusSprite) focusSprite.visible = false;
+      
+      // Only reset camera if we strictly have no focus
+      // (Optional: could also check if highlights exist, but typically focus reset implies camera reset)
+       if (!newFocusParam && !newHighlightParam) {
+          debugLog("popstate: no params, resetting view");
+          // Reset to initial camera position
+          camera.position.set(
+            center[0] + radius * 0.6,
+            center[1] + radius * 0.3,
+            center[2] + radius * 0.6,
+          );
+          controls.target.set(center[0], center[1], center[2]);
+          controls.update();
+       }
+    }
+
+    // Handle highlight update
+    if (newHighlightParam) {
+      debugLog("popstate: highlights on", newHighlightParam);
+      const systems = newHighlightParam.split(",").map((s) => s.trim());
+      applyHighlights(systems);
+    } else {
+      clearHighlights();
     }
   });
 
@@ -1622,6 +1798,28 @@ function ensureRouteTableInViewport(element) {
   let frameCount = 0;
   function animate() {
     requestAnimationFrame(animate);
+
+    // Smooth dimming transition
+    const lerpFactor = 0.1; // Adjust speed (0.1 approx 0.5s)
+    
+    // Update star opacity
+    if (Math.abs(starOpacityState.current - starOpacityState.target) > 0.001) {
+      starOpacityState.current += (starOpacityState.target - starOpacityState.current) * lerpFactor;
+      if (starPoints && starPoints.children) {
+        starPoints.children.forEach((pts) => {
+          if (pts.material) pts.material.opacity = starOpacityState.current;
+        });
+      }
+    }
+
+    // Update jump line opacity
+    if (Math.abs(lineOpacityState.current - lineOpacityState.target) > 0.001) {
+      lineOpacityState.current += (lineOpacityState.target - lineOpacityState.current) * lerpFactor;
+      if (jumpLines && jumpLines.material) {
+        jumpLines.material.opacity = lineOpacityState.current;
+      }
+    }
+
     hoverStep();
     controls.update();
     renderer.render(scene, camera);
